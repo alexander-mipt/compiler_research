@@ -3,32 +3,65 @@
 #include <unistd.h>
 
 namespace IR {
-using opcode_t = uint8_t;
+
+enum opcode_t {
+    OPC_UNDEF,
+};
 
 enum instr_t {
-    UNDEF,
+    TYP_UNDEF,
+    TYP_UNARY,
+    TYP_BINARY,
+    TYP_CAST,
+    TYP_MEM,
+    TYP_BRANCH,
+    // result type
 };
 
 struct bb_info {
     uint64_t bb_id{0};
 };
 
-// base class
-class Instr {
-  public:
+// base struct
+struct Instr {
     virtual ~Instr(){};
+    Instr();
+    Instr(opcode_t opcode, instr_t type);
+    // virtual clone();
+    // Instr(const Instr&);
 
-  protected:
-    opcode_t m_opcd{0};
-    instr_t m_type{UNDEF};
-    bb_info m_bb{};
+    const opcode_t m_opcd{OPC_UNDEF};
+    const instr_t m_type{TYP_UNDEF};
     Instr *m_prev{nullptr};
     Instr *m_next{nullptr};
+    int instr_id{};
+    // list of inputs (uses)
+    // list of outputs (defs)
+    bb_info m_bb{};
 };
 
-class Branch : public Instr {
-
+struct UnaryOp : public Instr {
+    UnaryOp(opcode_t opcode);
 };
 
+struct BinaryOp : public Instr {
+    BinaryOp(opcode_t opcode);
+};
+
+struct CastOp : public Instr {
+    CastOp(opcode_t opcode);
+};
+
+struct MemOp : public Instr {
+    MemOp(opcode_t opcode);
+};
+
+struct BranchOp : public Instr {
+    BranchOp(opcode_t opcode);
+};
+
+struct PHI {
+    PHI();
+};
 
 } // namespace IR
