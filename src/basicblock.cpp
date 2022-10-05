@@ -58,10 +58,21 @@ void BasicBlock::pop_phi() {
     m_phi_ptrs.pop_back();
 }
 
-
 void BasicBlock::pop_instr() {
     auto *ptr = m_instr_ptrs.back();
     delete ptr;
     m_instr_ptrs.pop_back();
 }
+
+std::string BasicBlock::dump() const {
+    std::stringstream ss{};
+    if (m_instr_ptrs.size() > 0) {
+        ss << "instr head {\n" << m_first->dump() << "}\n";
+        for (auto* instr: m_instr_ptrs) {
+            instr->dump();
+        }
+        ss << "instr tail {\n" << m_last->dump() << "\n}\n";
+    }   
+}
+
 } // namespace IR

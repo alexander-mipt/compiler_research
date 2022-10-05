@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
 #include <unistd.h>
+#include <string>
+#include "types.hpp"
 
 namespace IR {
 
@@ -18,15 +20,12 @@ enum instr_t {
     // result type
 };
 
-struct bb_info {
-    uint64_t bb_id{0};
-};
-
 // base struct
 struct Instr {
     virtual ~Instr(){};
     Instr();
     Instr(opcode_t opcode, instr_t type);
+    std::string dump() const;
     // virtual clone();
     // Instr(const Instr&);
 
@@ -34,10 +33,10 @@ struct Instr {
     const instr_t m_type{TYP_UNDEF};
     Instr *m_prev{nullptr};
     Instr *m_next{nullptr};
-    int instr_id{};
+    id_t instr_id{ID_UNDEF};
     // list of inputs (uses)
     // list of outputs (defs)
-    bb_info m_bb{};
+    id_t m_bb{ID_UNDEF};
 };
 
 struct UnaryOp : public Instr {
