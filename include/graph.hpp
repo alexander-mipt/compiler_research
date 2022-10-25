@@ -4,6 +4,7 @@
 #include <list>
 #include <map>
 #include <optional>
+#include <queue>
 #include <set>
 #include <sstream>
 #include <string>
@@ -217,6 +218,7 @@ template <typename N, typename E> class Graph {
     std::optional<Node<N, E> &> access_node(key_t node_key);
 
     std::vector<key_t> DFS(key_t root_key);
+    std::vector<key_t> RPO(key_t root_key);
 
     bool node_exists(key_t key) const;
     virtual std::string dump() const;
@@ -430,6 +432,36 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::DFS_(Node<N, E
         }
     }
     nd.set_color(ColorT::BLACK);
+    return vec;
+}
+
+template <typename N, typename E> std::vector<key_t> Graph<N, E>::RPO(key_t root_key) {
+    auto res = m_nodes.find(root_key);
+    if (res == m_nodes.end()) {
+        ERROR("No such node key");
+        return {};
+    }
+    std::vector<key_t> vec{root_key};
+    auto *node = res->second;
+    node->set_color(ColorT::BLACK);
+    std::queue<key_t> q{};
+    q.push(node->get_key());
+    while (!q.empty()) {
+        key_t key = q.back();
+        q.pop();
+        Node<N, E> *node = m_nodes[key];
+        for (auto it = node->successors_begin(); it != node->successors_end(); it++) {
+            Node<N, E> *nd = it->second;
+            if (nd->get_color() != ColorT::BLACK) {
+                vec.push_back(nd->get_key());
+                nd->set_color(ColorT::BLACK);
+                q.push(nd->get_key());
+            }
+        }
+    }
+    for (auto &it : m_nodes) {
+        it.second->set_color(ColorT::WHITE);
+    }
     return vec;
 }
 
