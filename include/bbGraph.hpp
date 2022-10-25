@@ -11,7 +11,7 @@ struct Metadata {
 
 class BbGraph : public Graph<BasicBlock, int> {
     public:
-    G::key_t add_node(BasicBlock node_data, G::key_t node_key) override;
+    G::key_t add_node(const BasicBlock&& node_data) override;
     private:
     Metadata m_metadata; 
 };

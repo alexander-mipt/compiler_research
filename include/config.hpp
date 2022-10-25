@@ -17,7 +17,7 @@
     } while (0)
 #define $(x)                                                                                       \
     do {                                                                                           \
-        std::cerr << #x << ": " << x << "\n";                                                      \
+        std::cerr << #x << ": " << static_cast<int>(x) << "\n";                                                      \
     } while (0)
 #define $hex(x)                                                                                    \
     do {                                                                                           \
