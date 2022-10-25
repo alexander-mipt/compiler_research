@@ -7,26 +7,43 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace G {
 using key_t = long long;
 constexpr key_t KEY_UNDEF = 0;
 constexpr key_t KEY_DUBLICATE = -1;
+
+enum class ColorT {
+    WHITE,
+    GRAY,
+    BLACK,
+};
+
 using weight_t = int;
 
 template <typename N, typename E> class Graph;
 
 // N - type of additional data
 template <typename N, typename E> class Node {
+
   public:
-    Node(const N&& data, const Graph<N, E> &g);
-    virtual ~Node() {};
+    Node(const N &&data, const Graph<N, E> &g);
+    virtual ~Node(){};
     key_t add_successor(key_t s_key);
     key_t add_predecessor(key_t p_key);
     key_t delete_successor(key_t s_key);
     key_t delete_predecessor(key_t p_key);
+
+    typename std::map<key_t, Node<N, E> *>::iterator predecessors_begin();
+    typename std::map<key_t, Node<N, E> *>::iterator predecessors_end();
+    typename std::map<key_t, Node<N, E> *>::iterator successors_begin();
+    typename std::map<key_t, Node<N, E> *>::iterator successors_end();
+
+    void set_color(ColorT c);
     N &access_data() &;
     const key_t get_key() const;
+    ColorT get_color() const;
     key_t key_init();
     // const weight_t get_weight() const;
   protected:
@@ -39,10 +56,35 @@ template <typename N, typename E> class Node {
     key_t m_key{KEY_UNDEF};
     std::map<key_t, Node<N, E> *> m_successors{};
     std::map<key_t, Node<N, E> *> m_predecessors{};
+    ColorT m_color{ColorT::WHITE};
 };
 
 template <typename N, typename E>
-Node<N, E>::Node(const N&& data, const Graph<N, E> &g) : m_data(std::move(data)), m_graph(&g) {}
+Node<N, E>::Node(const N &&data, const Graph<N, E> &g) : m_data(std::move(data)), m_graph(&g) {}
+
+template <typename N, typename E> void Node<N, E>::set_color(ColorT c) { m_color = c; }
+
+template <typename N, typename E> ColorT Node<N, E>::get_color() const { return m_color; }
+
+template <typename N, typename E>
+typename std::map<key_t, Node<N, E> *>::iterator Node<N, E>::predecessors_begin() {
+    return m_predecessors.begin();
+}
+
+template <typename N, typename E>
+typename std::map<key_t, Node<N, E> *>::iterator Node<N, E>::predecessors_end() {
+    return m_predecessors.end();
+}
+
+template <typename N, typename E>
+typename std::map<key_t, Node<N, E> *>::iterator Node<N, E>::successors_begin() {
+    return m_successors.begin();
+}
+
+template <typename N, typename E>
+typename std::map<key_t, Node<N, E> *>::iterator Node<N, E>::successors_end() {
+    return m_successors.end();
+}
 
 template <typename N, typename E> key_t Node<N, E>::key_init() {
     if (m_key != KEY_UNDEF) {
@@ -168,15 +210,16 @@ template <typename N, typename E> class Graph {
     Graph &operator=(const Graph &) = delete;
     virtual ~Graph();
 
-    virtual key_t add_node(const N&& node_data);
+    virtual key_t add_node(const N &&node_data);
     virtual key_t delete_node(key_t node_key);
     virtual key_t add_edge(E edge_data, key_t start_node_key, key_t end_node_key);
     virtual key_t delete_edge(key_t start_node_key, key_t end_node_key);
     std::optional<Node<N, E> &> access_node(key_t node_key);
 
+    std::vector<key_t> DFS(key_t root_key);
+
     bool node_exists(key_t key) const;
     virtual std::string dump() const;
-
     key_t get_avail_nd_key() const;
     key_t get_avail_edg_key() const;
 
@@ -186,6 +229,9 @@ template <typename N, typename E> class Graph {
   protected:
     // only deletes edge
     key_t delete_edge(key_t edge_key);
+
+  private:
+    std::vector<key_t> DFS_(Node<N, E> &nd);
 
   protected:
     std::map<key_t, Node<N, E> *> m_nodes{};
@@ -202,7 +248,7 @@ template <typename N, typename E> key_t Graph<N, E>::get_avail_edg_key() const {
     return m_actual_edge_key;
 }
 
-template <typename N, typename E> key_t Graph<N, E>::add_node(const N&& node_data) {
+template <typename N, typename E> key_t Graph<N, E>::add_node(const N &&node_data) {
     Node<N, E> *nptr = new Node<N, E>{std::move(node_data), *this};
     key_t node_key = nptr->key_init();
     auto node_insertion_result = m_nodes.insert(std::make_pair(node_key, nptr));
@@ -356,4 +402,35 @@ template <typename N, typename E> std::string Graph<N, E>::dump() const {
     ss << "}\n";
     return ss.str();
 }
+
+template <typename N, typename E> std::vector<key_t> Graph<N, E>::DFS(key_t root_key) {
+    auto res = m_nodes.find(root_key);
+    if (res == m_nodes.end()) {
+        ERROR("No such node key");
+        return {};
+    }
+    auto *node = res->second;
+    std::vector<key_t> vec{};
+    if (node->get_color() == ColorT::WHITE) {
+        vec = DFS_(*node);
+    }
+    for (auto &it : m_nodes) {
+        it.second->set_color(ColorT::WHITE);
+    }
+    return vec;
+}
+
+template <typename N, typename E> std::vector<key_t> Graph<N, E>::DFS_(Node<N, E> &nd) {
+    std::vector<key_t> vec{nd.get_key()};
+    nd.set_color(ColorT::GRAY);
+    for (auto it = nd.successors_begin(); it != nd.successors_end(); it++) {
+        if (it->second->get_color() == ColorT::WHITE) {
+            std::vector<key_t> tmp = DFS_(*(it->second));
+            vec.insert(vec.end(), tmp.begin(), tmp.end());
+        }
+    }
+    nd.set_color(ColorT::BLACK);
+    return vec;
+}
+
 } // namespace G

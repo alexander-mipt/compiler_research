@@ -71,7 +71,7 @@ TEST_CASE("Test API 3", "[graph3]") {
     std::cerr << d.dump();
 }
 
-TEST_CASE("Test API 3", "[graph3]") {
+TEST_CASE("Test API 4", "[graph3]") {
 
     G::Graph<int, int> d{};
     G::key_t edge_key{1};
@@ -83,17 +83,25 @@ TEST_CASE("Test API 3", "[graph3]") {
     std::cerr << d.dump();
 }
 
-// TEST_CASE("Test API 3", "[graph3]") {
+TEST_CASE("Test DFS", "[DFS1]") {
 
-//     G::Graph<int, int> d{};
-//     G::key_t edge_key{1};
-//     int 10{5};
+    G::Graph<int, int> g{};
+    
+    for (key_t i = 1; i <= 7; ++i) {
+        REQUIRE(g.add_node(10) != G::KEY_UNDEF);
+    }
+    REQUIRE(g.add_edge(10, 1, 2) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 2, 3) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 3, 4) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 5, 4) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 6, 5) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 6, 7) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 7, 4) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 2, 6) != G::KEY_UNDEF);
+    auto vector = g.DFS(1);
 
-//     for (key_t i = 0; i < 20)
-
-//     REQUIRE(d.add_edge(10, 1, 3) == G::KEY_UNDEF);
-//     REQUIRE(d.delete_edge(1, 3) == G::KEY_UNDEF);
-//     REQUIRE(d.delete_node(1) == G::KEY_UNDEF);
-
-//     std::cerr << d.dump();
-// }
+    std::cerr << g.dump();
+    for (auto elem: vector) {
+        std::cerr << elem << "\t";
+    }
+}
