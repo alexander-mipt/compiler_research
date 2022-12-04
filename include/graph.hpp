@@ -19,6 +19,7 @@ enum class ColorT {
     WHITE,
     GRAY,
     BLACK,
+    HIDDEN,
 };
 
 using weight_t = int;
@@ -219,6 +220,7 @@ template <typename N, typename E> class Graph {
 
     std::vector<key_t> DFS(key_t root_key);
     std::vector<key_t> RPO(key_t root_key);
+    void domSearch(key_t root_key, key_t target_node);
 
     bool node_exists(key_t key) const;
     virtual std::string dump() const;
@@ -234,6 +236,8 @@ template <typename N, typename E> class Graph {
 
   private:
     std::vector<key_t> DFS_(Node<N, E> &nd);
+    std::vector<ColorT> preserve_colors_() const;
+    void recover_colors_(const std::vector<ColorT>& vec);
 
   protected:
     std::map<key_t, Node<N, E> *> m_nodes{};
@@ -411,14 +415,13 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::DFS(key_t root
         ERROR("No such node key");
         return {};
     }
+    std::vector<ColorT> colors = preserve_colors_();
     auto *node = res->second;
     std::vector<key_t> vec{};
     if (node->get_color() == ColorT::WHITE) {
         vec = DFS_(*node);
     }
-    for (auto &it : m_nodes) {
-        it.second->set_color(ColorT::WHITE);
-    }
+    recover_colors_(colors);
     return vec;
 }
 
@@ -433,6 +436,28 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::DFS_(Node<N, E
     }
     nd.set_color(ColorT::BLACK);
     return vec;
+}
+
+template <typename N, typename E>
+std::vector<ColorT> Graph<N, E>::preserve_colors_() const {
+    std::vector<ColorT> vec{};
+    for (auto &it : m_nodes) {
+        vec.push_back(it.second->get_color());
+    }
+    return vec;
+}
+
+template <typename N, typename E>
+void Graph<N, E>::recover_colors_(const std::vector<ColorT>& vec) {
+    if (vec.size() != m_nodes.size()) {
+        ERROR("Wrong countity of colors");
+        return;
+    }
+
+    auto i = 0;
+    for (auto &it : m_nodes) {
+        it.second->set_color(vec[i++]);
+    }
 }
 
 template <typename N, typename E> std::vector<key_t> Graph<N, E>::RPO(key_t root_key) {
@@ -463,6 +488,28 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::RPO(key_t root
         it.second->set_color(ColorT::WHITE);
     }
     return vec;
+}
+
+// not tested yet
+template <typename N, typename E> void Graph<N, E>::domSearch(key_t root_key, key_t target_key) {
+    auto res = m_nodes.find(root_key);
+    if (res == m_nodes.end()) {
+        ERROR("No such root key");
+        return;
+    }
+    res = m_nodes.find(target_key);
+    if (res == m_nodes.end()) {
+        ERROR("No such target key");
+        return;
+    }
+    std::vector<key_t> tmp = DFS(root_key);
+    std::set<key_t> initial_nodes(tmp.begin(), tmp.end());
+    m_nodes[target_key].set_color(ColorT::HIDDEN);
+    std::vector<key_t> reduced = DFS(root_key);
+    for (auto &node: reduced) {
+        initial_nodes.erase()
+    }
+
 }
 
 } // namespace G

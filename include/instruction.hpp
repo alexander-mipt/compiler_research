@@ -56,6 +56,8 @@ enum class FlowT { NONE, DEF, USE };
 
 class InstrBase;
 
+// related to def only
+// contain instr id and bb id
 struct InstrInput {
     InstrInput(const InstrBase *instr, FlowT flowType) : m_instr(instr), m_flow(flowType) {}
     virtual ~InstrInput(){};
@@ -67,6 +69,7 @@ struct InstrInput {
     const FlowT m_flow{FlowT::NONE};
 };
 
+// metainstruction w/ Inputs
 struct PhiInstr final : public InstrInput {
     PhiInstr(const InstrBase *instr, FlowT flowType) : InstrInput(instr, flowType){};
     PhiInstr(const InstrBase *instr, FlowT flowType, const std::list<InstrInput> &&list)
