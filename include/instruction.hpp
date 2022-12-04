@@ -9,6 +9,9 @@
 namespace IR {
 
 class BasicBlock;
+class InstrBase;
+
+using initList = std::initializer_list<const InstrBase *>;
 
 enum class OpcdT {
     NONE,
@@ -38,7 +41,7 @@ enum class OpcdT {
 };
 
 enum class InstrT {
-    NONE,
+    UNDEF,
     U8,
     U16,
     U32,
@@ -47,72 +50,75 @@ enum class InstrT {
     I16,
     I32,
     I64,
+    PHY,
     // result type
 };
 
 enum class CondCodeT { EQ, NE, LT, GE };
-
 enum class FlowT { NONE, DEF, USE };
-
-class InstrBase;
 
 // related to def only
 // contain instr id and bb id
-struct InstrInput {
-    InstrInput(const InstrBase *instr, FlowT flowType) : m_instr(instr), m_flow(flowType) {}
-    virtual ~InstrInput(){};
-
-    virtual std::string dump() const;
-    virtual bool is_phi() const { return false; }
-
-    const InstrBase *const m_instr{nullptr};
-    const FlowT m_flow{FlowT::NONE};
-};
-
 // metainstruction w/ Inputs
-struct PhiInstr final : public InstrInput {
-    PhiInstr(const InstrBase *instr, FlowT flowType) : InstrInput(instr, flowType){};
-    PhiInstr(const InstrBase *instr, FlowT flowType, const std::list<InstrInput> &&list)
-        : InstrInput(instr, flowType), m_others(std::move(list)){};
-    std::string dump() const override;
-    bool is_phi() const override { return true; }
-    
-    std::list<InstrInput> m_others{};
-};
+
 class InstrBase {
-    using CInputListIt = typename std::list<InstrInput *>::const_iterator;
+    using UsersT = std::list<const InstrBase *>;
+    using CInputListIt = typename UsersT::const_iterator;
+    using InputListIt = typename UsersT::iterator;
 
   public:
     virtual ~InstrBase();
-    InstrBase(const BasicBlock &bb, OpcdT opcode, InstrT type);
-    InstrBase(const InstrBase &other);
-    InstrBase(const InstrBase &&other);
-    void set_prev(InstrBase *instr) { m_prev = instr; }
-    void set_next(InstrBase *instr) { m_next = instr; }
+    InstrBase(){};
+    InstrBase(const BasicBlock &bb);
+    // InstrBase(const InstrBase &other);
+    // InstrBase(const InstrBase &&other);
+    void set_prev(const InstrBase *instr);
+    void set_next(const InstrBase *instr);
     void set_bb(const BasicBlock *bb);
-    void push_input(const InstrInput &&elem);
-    void erase_input(CInputListIt cit);
+    void push_input(const InstrBase *instr);
+    void push_inputs(initList list);
+    InputListIt begin();
+    InputListIt end();
+    InputListIt last();
+    CInputListIt erase_input(CInputListIt cit);
 
     virtual std::string dump() const;
-    const InstrBase *get_prev() const { return m_prev; }
-    const InstrBase *get_next() const { return m_next; }
+    void throwIfNonConsistence_() const;
+    virtual InstrT get_type() const;
+    const InstrBase *get_prev() const;
+    const InstrBase *get_next() const;
     const BasicBlock &get_bb() const;
-    CInputListIt cbegin() const { return m_users.cbegin(); }
-    CInputListIt cend() const { return m_users.cend(); }
-    CInputListIt clast() const { return --m_users.cend(); }
-    id_t get_id() const { return m_id; }
+    CInputListIt cbegin() const;
+    CInputListIt cend() const;
+    CInputListIt clast() const;
+    
+    id_t get_id() const;
+
+  protected:
+    const id_t m_id{ID_UNDEF};
+    const BasicBlock *m_bb{nullptr};
+    const InstrBase *m_prev{nullptr};
+    const InstrBase *m_next{nullptr};
+    UsersT m_users{};
+};
+
+class Instr : public InstrBase {
+  public:
+    Instr();
+    Instr(const BasicBlock &bb, OpcdT opcode, InstrT type);
+    Instr(const BasicBlock &bb, OpcdT opcode, InstrT type, initList list);
+    std::string dump() const override;
 
   public:
     const OpcdT m_opcd{OpcdT::NONE};
-    const InstrT m_type{InstrT::NONE};
+    const InstrT m_type{InstrT::UNDEF};
+};
 
-  protected:
-    static id_t g_id;
-    const id_t m_id{ID_UNDEF};
-    const BasicBlock *m_bb{nullptr};
-    InstrBase *m_prev{nullptr};
-    InstrBase *m_next{nullptr};
-    std::list<InstrInput *> m_users{};
+class Phy final : public InstrBase {
+  public:
+    Phy();
+    Phy(initList list);
+    std::string dump() const override;
 };
 
 // Specific instrs classes
