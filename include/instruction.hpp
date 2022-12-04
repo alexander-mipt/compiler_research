@@ -75,8 +75,10 @@ class InstrBase {
     void set_prev(const InstrBase *instr);
     void set_next(const InstrBase *instr);
     void set_bb(const BasicBlock *bb);
+    void set_id(id_t id);
     void push_input(const InstrBase *instr);
     void push_inputs(initList list);
+    void forget_dependencies();
     InputListIt begin();
     InputListIt end();
     InputListIt last();
@@ -106,7 +108,6 @@ class Instr : public InstrBase {
   public:
     Instr();
     Instr(const BasicBlock &bb, OpcdT opcode, InstrT type);
-    Instr(const BasicBlock &bb, OpcdT opcode, InstrT type, initList list);
     std::string dump() const override;
 
   public:

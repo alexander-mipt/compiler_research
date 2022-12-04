@@ -11,24 +11,30 @@
 namespace IR {
 
 class BasicBlock final {
-    using InstrCIt = typename std::list<InstrBase *>::const_iterator;
-    using PhiCIt = typename std::list<PhiInstr *>::const_iterator;
+    using InstrCIt = typename std::list<Instr *>::const_iterator;
+    using PhyCIt = typename std::list<Phy *>::const_iterator;
+    using InstrIt = typename std::list<Instr *>::iterator;
+    using PhyIt = typename std::list<Phy *>::iterator;
+    using InstrContainer = std::list<Instr *>;
+    using PhyContainer = std::list<Phy *>;
+    using InstrInitList = std::initializer_list<const Instr*>;
+    using PhyInitList = std::initializer_list<const Phy*>;
 
   public:
-    // BasicBlock();
+    BasicBlock();
+    BasicBlock(id_t id);
+    // copy instrs by ptr & create internal CF connections
+    BasicBlock(id_t id, InstrInitList instrs, PhyInitList phys);
+    // creates copy w/ same DF dependencies, but CF, id and bb id are edited 
+    void push_instrs(InstrInitList instrs);
 
-    BasicBlock(const BasicBlock &&bb);
+    BasicBlock(const BasicBlock &&bb) = delete;
     BasicBlock &operator=(const BasicBlock &&) = delete;
     BasicBlock(const BasicBlock &bb) = delete;
     BasicBlock &operator=(const BasicBlock &) = delete;
-    ~BasicBlock() {
-        for (auto ptr : m_instr_ptrs) {
-            delete ptr;
-        }
-        for (auto ptr : m_phi_ptrs) {
-            delete ptr;
-        }
-    }
+    ~BasicBlock();
+
+    void throwIfNonConsistence_() const;
 
     id_t set_id(id_t id) {
         if (id == ID_UNDEF) {
@@ -42,12 +48,7 @@ class BasicBlock final {
         m_bb_id = id;
     }
 
-    InstrCIt push_instr(const InstrBase &instr) {
-        InstrBase *ptr = new InstrBase(instr);
-
-        m_instr_ptrs.push_back(ptr);
-    }
-    PhiCIt push_phi(const PhiInstr &phi) {
+    PhyCIt push_phys(PhyInitList list) {
         PhiInstr *ptr = new PhiInstr(phi);
         m_phi_ptrs.push_back(ptr);
     }
@@ -66,16 +67,22 @@ class BasicBlock final {
         }
     }
 
+    InstrIt instr_begin();
+    InstrIt instr_end();
+    PhyIt phy_begin();
+    PhyIt phy_end();
+
     std::vector<std::string> dump() const;
     id_t get_id() const { return m_bb_id; }
-    InstrCIt instr_cbegin() const { return m_instr_ptrs.cbegin(); }
-    InstrCIt instr_cend() const { return m_instr_ptrs.cend(); }
-    PhiCIt phi_cbegin() const { return m_phi_ptrs.cbegin(); }
-    PhiCIt phi_cend() const { return m_phi_ptrs.cend(); }
+    InstrCIt instr_cbegin() const;
+    InstrCIt instr_cend() const;
+    PhyCIt phy_cbegin() const;
+    PhyCIt phy_cend() const;
 
   private:
     id_t m_bb_id{ID_UNDEF};
-    std::list<PhiInstr *> m_phi_ptrs{};
-    std::list<InstrBase *> m_instr_ptrs{};
+    PhyContainer m_phys{};
+    InstrContainer m_instrs{};
+    id_t m_cur_instr_id{ID_UNDEF};
 };
 } // namespace IR

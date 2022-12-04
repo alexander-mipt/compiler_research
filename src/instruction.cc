@@ -11,6 +11,7 @@ InstrBase::InstrBase(const BasicBlock &bb) : m_bb(&bb) {}
 void InstrBase::set_prev(const InstrBase *instr) { m_prev = instr; }
 void InstrBase::set_next(const InstrBase *instr) { m_next = instr; }
 void InstrBase::set_bb(const BasicBlock *bb) { m_bb = bb; }
+void InstrBase::set_id(id_t id) { m_id = id; }
 std::string InstrBase::dump() const { return "???"; };
 InstrT InstrBase::get_type() const { return InstrT::UNDEF; };
 const InstrBase *InstrBase::get_prev() const { return m_prev; }
@@ -22,6 +23,13 @@ InstrBase::InputListIt InstrBase::begin() { return m_users.begin(); }
 InstrBase::InputListIt InstrBase::end() { return m_users.end(); }
 InstrBase::InputListIt InstrBase::last() { return --m_users.end(); }
 id_t InstrBase::get_id() const { return m_id; }
+
+void InstrBase::forget_dependencies() {
+    m_prev = nullptr;
+    m_next = nullptr;
+    m_bb = nullptr;
+    m_users.clear();
+}
 
 void InstrBase::set_bb(const BasicBlock *bb) {
     if (bb == nullptr) {
@@ -70,10 +78,6 @@ void InstrBase::throwIfNonConsistence_() const {
 /* Instr class */
 Instr::Instr() {}
 Instr::Instr(const BasicBlock &bb, OpcdT opcode, InstrT type) : InstrBase(bb), m_opcd(opcode), m_type(type) {} 
-
-Instr::Instr(const BasicBlock &bb, OpcdT opcode, InstrT type, initList list) : Instr(bb, opcode, type) {
-    push_inputs(list);
-}
 
 std::string Instr::dump() const {
     std::stringstream ss{};
