@@ -8,6 +8,17 @@ namespace IR {
 /* Instr Base class */
 InstrBase::~InstrBase() {}
 InstrBase::InstrBase(const BasicBlock &bb) : m_bb(&bb) {}
+InstrBase::InstrBase(const BasicBlock &bb, id_t id) : m_bb(&bb), m_id(id) {}
+InstrBase::InstrBase(const BasicBlock &bb, id_t id, initList list) : InstrBase(bb, id) {
+    for (const auto* ptr: list) {
+        if (ptr == nullptr) {
+            throw std::logic_error("nullptr arg");
+        }
+    }
+    for (const auto* ptr: list) {
+        m_users.push_back(ptr);
+    }
+}
 void InstrBase::set_prev(const InstrBase *instr) { m_prev = instr; }
 void InstrBase::set_next(const InstrBase *instr) { m_next = instr; }
 void InstrBase::set_bb(const BasicBlock *bb) { m_bb = bb; }
@@ -18,10 +29,20 @@ const InstrBase *InstrBase::get_prev() const { return m_prev; }
 const InstrBase *InstrBase::get_next() const { return m_next; }
 InstrBase::CInputListIt InstrBase::cbegin() const { return m_users.cbegin(); }
 InstrBase::CInputListIt InstrBase::cend() const { return m_users.cend(); }
-InstrBase::CInputListIt InstrBase::clast() const { return --m_users.cend(); }
+InstrBase::CInputListIt InstrBase::clast() const {
+    if (m_users.size() == 0) {
+        return m_users.cend();
+    }
+    return --m_users.cend();
+}
 InstrBase::InputListIt InstrBase::begin() { return m_users.begin(); }
 InstrBase::InputListIt InstrBase::end() { return m_users.end(); }
-InstrBase::InputListIt InstrBase::last() { return --m_users.end(); }
+InstrBase::InputListIt InstrBase::last() {
+    if (m_users.size() == 0) {
+        return m_users.end();
+    }
+    return --m_users.end();
+}
 id_t InstrBase::get_id() const { return m_id; }
 
 void InstrBase::forget_dependencies() {
@@ -53,12 +74,12 @@ void InstrBase::push_input(const InstrBase *elem) {
 InstrBase::CInputListIt InstrBase::erase_input(CInputListIt cit) { return m_users.erase(cit); }
 
 void InstrBase::push_inputs(initList list) {
-    for (auto elem: list) {
+    for (auto elem : list) {
         if (elem == nullptr) {
             throw std::logic_error("nullptr in argList");
         }
     }
-    for (auto elem: list) {
+    for (auto elem : list) {
         push_input(elem);
     }
 }
@@ -77,7 +98,8 @@ void InstrBase::throwIfNonConsistence_() const {
 
 /* Instr class */
 Instr::Instr() {}
-Instr::Instr(const BasicBlock &bb, OpcdT opcode, InstrT type) : InstrBase(bb), m_opcd(opcode), m_type(type) {} 
+Instr::Instr(const BasicBlock &bb, id_t id, OpcdT opcode, InstrT type)
+    : InstrBase(bb, id), m_opcd(opcode), m_type(type) {}
 
 std::string Instr::dump() const {
     std::stringstream ss{};
@@ -86,7 +108,7 @@ std::string Instr::dump() const {
         auto bb_id = m_bb->get_id();
         ss $intn(bb_id);
     }
-    if (m_next != nullptr ) {
+    if (m_next != nullptr) {
         auto next = m_next->get_id();
         ss $intn(next);
     }
@@ -95,7 +117,7 @@ std::string Instr::dump() const {
         ss $intn(prev);
     }
     ss $("Users: ");
-    for (auto ptr: m_users) {
+    for (auto ptr : m_users) {
         if (ptr != nullptr) {
             ss << ptr->get_id() << " ";
         }
@@ -103,6 +125,10 @@ std::string Instr::dump() const {
     ss $n("");
     return ss.str();
 }
+
+/* Phy class */
+Phy::Phy() : InstrBase() {}
+Phy::Phy(const BasicBlock &bb, id_t id, initList list) : InstrBase(bb, id, list) {}
 
 #if 0
 std::string InstrInput::dump() const {

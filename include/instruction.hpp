@@ -14,7 +14,7 @@ class InstrBase;
 using initList = std::initializer_list<const InstrBase *>;
 
 enum class OpcdT {
-    NONE,
+    UNDEF,
     CAST,
     ADDI,
     ADD,
@@ -70,6 +70,8 @@ class InstrBase {
     virtual ~InstrBase();
     InstrBase(){};
     InstrBase(const BasicBlock &bb);
+    InstrBase(const BasicBlock &bb, id_t id);
+    InstrBase(const BasicBlock &bb, id_t id, initList list);
     // InstrBase(const InstrBase &other);
     // InstrBase(const InstrBase &&other);
     void set_prev(const InstrBase *instr);
@@ -97,7 +99,7 @@ class InstrBase {
     id_t get_id() const;
 
   protected:
-    const id_t m_id{ID_UNDEF};
+    id_t m_id{ID_UNDEF};
     const BasicBlock *m_bb{nullptr};
     const InstrBase *m_prev{nullptr};
     const InstrBase *m_next{nullptr};
@@ -107,18 +109,18 @@ class InstrBase {
 class Instr : public InstrBase {
   public:
     Instr();
-    Instr(const BasicBlock &bb, OpcdT opcode, InstrT type);
+    Instr(const BasicBlock &bb, id_t id, OpcdT opcode, InstrT type);
     std::string dump() const override;
 
   public:
-    const OpcdT m_opcd{OpcdT::NONE};
+    const OpcdT m_opcd{OpcdT::UNDEF};
     const InstrT m_type{InstrT::UNDEF};
 };
 
 class Phy final : public InstrBase {
   public:
     Phy();
-    Phy(initList list);
+    Phy(const BasicBlock &bb, id_t id, initList list);
     std::string dump() const override;
 };
 
