@@ -71,7 +71,18 @@ void InstrBase::push_input(const InstrBase *elem) {
     m_users.push_back(elem);
 }
 
-InstrBase::CInputListIt InstrBase::erase_input(CInputListIt cit) { return m_users.erase(cit); }
+InstrBase::InputListIt InstrBase::erase_input(InputListIt cit) { return m_users.erase(cit); }
+
+bool InstrBase::erase_input(id_t bb_id, id_t id) {
+    for (InputListIt it = m_users.begin(); it != m_users.end(); ++it) {
+        const auto *input = *it;
+        if (input->get_bb().get_id() == bb_id && input->get_id() == id) {
+            InputListIt res = m_users.erase(it);
+            return (res != it);
+        }
+    }
+    return false;
+}
 
 void InstrBase::push_inputs(initList list) {
     for (auto elem : list) {

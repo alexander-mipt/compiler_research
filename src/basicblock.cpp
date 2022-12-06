@@ -12,11 +12,11 @@ BasicBlock::BasicBlock(id_t id, InstrInitList instrs, PhyInitList phys) : m_bb_i
         }
     }
     Instr *prev{nullptr};
-    for (const auto *ptr : instrs) {
-        Instr *instr = new Instr(*ptr);
-        instr->set_bb(this);
-        instr->set_id(++m_cur_instr_id);
+    for (auto &args : instrs) {
+        Instr *instr = new Instr(*this, ++m_cur_instr_id, args.opcode, args.type);
+        instr->set_prev(prev);
         m_instrs.push_back(instr);
+        prev = instr;
     }
 }
 
@@ -66,16 +66,9 @@ BasicBlock::PhyIt BasicBlock::phy_last() {
 }
 
 void BasicBlock::push_instrs(InstrInitList list) {
-    for (auto ptr : list) {
-        if (ptr == nullptr) {
-            throw std::logic_error("nullptr args");
-        }
-    }
     Instr *prev = m_instrs.size()? *instr_clast() : nullptr;
-    for (const auto *ptr : list) {
-        Instr *instr = new Instr(*ptr);
-        instr->set_bb(this);
-        instr->set_id(++m_cur_instr_id);
+    for (auto &args : list) {
+        Instr *instr = new Instr(*this, ++m_cur_instr_id, args.opcode, args.type);
         instr->set_prev(prev);
         m_instrs.push_back(instr);
         prev = instr;
@@ -116,20 +109,20 @@ std::vector<std::string> BasicBlock::dump() const {
 
 id_t BasicBlock::set_id(id_t id) { m_bb_id = id; }
 
-BasicBlock::InstrCIt BasicBlock::erase_instr(InstrCIt it) {
-    if (it == m_instrs.cend()) {
-        return m_instrs.cend();
+BasicBlock::InstrIt BasicBlock::erase_instr(InstrIt it) {
+    if (it == m_instrs.end()) {
+        return m_instrs.end();
     }
-    InstrCIt nextIt = m_instrs.erase(it);
+    InstrIt nextIt = m_instrs.erase(it);
     delete *it;
     return nextIt;
 }
 
-BasicBlock::PhyCIt BasicBlock::erase_phy(PhyCIt it) {
-    if (it == m_phys.cend()) {
-        return m_phys.cend();
+BasicBlock::PhyIt BasicBlock::erase_phy(PhyIt it) {
+    if (it == m_phys.end()) {
+        return m_phys.end();
     }
-    PhyCIt nextIt = m_phys.erase(it);
+    PhyIt nextIt = m_phys.erase(it);
     delete *it;
     return nextIt;
 }

@@ -40,8 +40,8 @@ class BasicBlock final {
     // do not copy DF
     void push_instrs(InstrInitList list);
     void push_phys(PhyInitList list);
-    InstrCIt erase_instr(InstrCIt it);
-    PhyCIt erase_phy(PhyCIt it);
+    InstrIt erase_instr(InstrIt it);
+    PhyIt erase_phy(PhyIt it);
     id_t set_id(id_t id);
     InstrIt instr_begin();
     InstrIt instr_end();

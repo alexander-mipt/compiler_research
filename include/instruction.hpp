@@ -84,7 +84,8 @@ class InstrBase {
     InputListIt begin();
     InputListIt end();
     InputListIt last();
-    CInputListIt erase_input(CInputListIt cit);
+    InputListIt erase_input(InputListIt cit);
+    bool erase_input(id_t bb_id, id_t id);
 
     virtual std::string dump() const;
     void throwIfNonConsistence_() const;
