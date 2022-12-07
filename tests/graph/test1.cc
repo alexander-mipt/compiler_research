@@ -143,6 +143,29 @@ TEST_CASE("Test DFS", "[DFS1]") {
     std::cerr << "\n";
 }
 
+TEST_CASE("Test dom search", "[DOM1]") {
+    G::Graph<int, int> g{};
+
+    for (key_t i = 1; i <= 7; ++i) {
+        REQUIRE(g.add_node(10) != G::KEY_UNDEF);
+    }
+    REQUIRE(g.add_edge(10, 1, 2) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 2, 3) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 3, 4) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 5, 4) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 6, 5) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 6, 7) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 7, 4) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 2, 6) != G::KEY_UNDEF);
+    auto vector = g.getDominatedNodes(1, 6);
+
+    std::cerr << g.dump();
+    for (auto elem : vector) {
+        std::cerr << elem << "\t";
+    }
+    std::cerr << "\n";
+}
+
 TEST_CASE("Test graph buffer", "[Gbuf1]") {
 
     G::Graph<int, int> g{};

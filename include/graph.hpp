@@ -224,7 +224,7 @@ template <typename N, typename E> class Graph {
 
     std::vector<key_t> DFS(key_t root_key, key_t end_key = KEY_UNDEF);
     std::vector<key_t> RPO(key_t root_key);
-    void domSearch(key_t root_key, key_t target_node);
+    std::vector<key_t> getDominatedNodes(key_t root_key, key_t target_node);
 
     bool node_exists(key_t key) const;
     virtual std::string dump() const;
@@ -692,26 +692,39 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::RPO(key_t root
 }
 
 // not tested yet
-template <typename N, typename E> void Graph<N, E>::domSearch(key_t root_key, key_t target_key) {
-    #if 0
+template <typename N, typename E> std::vector<key_t> Graph<N, E>::getDominatedNodes(key_t root_key, key_t target_key) {
     auto res = m_nodes.find(root_key);
     if (res == m_nodes.end()) {
         ERROR("No such root key");
-        return;
+        return std::vector<key_t>{KEY_UNDEF};
     }
     res = m_nodes.find(target_key);
     if (res == m_nodes.end()) {
         ERROR("No such target key");
-        return;
+        return std::vector<key_t>{KEY_UNDEF};
     }
-    std::vector<key_t> tmp = DFS(root_key);
-    std::set<key_t> initial_nodes(tmp.begin(), tmp.end());
-    m_nodes[target_key].set_color(ColorT::HIDDEN);
+    std::vector<key_t> origin = DFS(root_key);
+    for (auto x: origin) {
+        std::cerr << x << " ";
+    }
+    std::cerr << "\n";
+    // std::set<key_t> initial_nodes(tmp.begin(), tmp.end());
+    cut_node(target_key);
     std::vector<key_t> reduced = DFS(root_key);
-    for (auto &node: reduced) {
-        initial_nodes.erase();
+    for (auto x: reduced) {
+        std::cerr << x << " ";
     }
-#endif
+    std::cerr << "\n";
+    for (auto node_key: reduced) {
+        for (auto it = origin.begin(); it != origin.end(); ++it) {
+            if (*it == node_key) {
+                origin.erase(it);
+                break;
+            }
+        }
+    }
+    paste_all();
+    return origin;
 }
 
 } // namespace G
