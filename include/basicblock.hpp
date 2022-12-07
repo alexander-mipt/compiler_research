@@ -30,10 +30,10 @@ class BasicBlock final {
     BasicBlock(id_t id);
     // copy instrs by ptr & create internal CF connections
     BasicBlock(id_t id, InstrInitList instrs, PhyInitList phys);
-    BasicBlock(const BasicBlock &&bb) = delete;
-    BasicBlock &operator=(const BasicBlock &&) = delete;
+    BasicBlock(BasicBlock &&bb);
+    BasicBlock &operator=(BasicBlock &&) = delete;
     BasicBlock(const BasicBlock &bb) = delete;
-    BasicBlock &operator=(const BasicBlock &) = delete;
+    BasicBlock &operator=(const BasicBlock &bb) = delete;
     ~BasicBlock();
 
     // creates copy w/ same DF dependencies, but CF, id and bb id are edited 

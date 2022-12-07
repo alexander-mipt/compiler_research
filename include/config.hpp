@@ -1,7 +1,14 @@
 #pragma once
+#include <cassert>
 #include <cstdio>
 #include <iostream>
+
 #ifndef NDEBUG
+#define OPT(expr) expr
+#else
+#define OPT(expr)
+#endif
+
 #define LOG(msg)                                                                                   \
     do {                                                                                           \
         std::cerr << "[LOG] " << #msg << "\n";                                                     \
@@ -15,21 +22,19 @@
     do {                                                                                           \
         fprintf(stderr, __VA_ARGS__);                                                              \
     } while (0)
-#define $(x)                                                                                       \
+
+#define $(x) << x
+#define $n(x) << x << "\n"
+#define $int(x) << std::dec << #x << ": " << static_cast<long>(x)
+#define $hex(x) << std::hex << #x << ": " << static_cast<long>(x)
+#define $ptr(x) << std::hex << #x << ": " << x
+#define $intn(x) $int(x) << "\n"
+#define $hexn(x) $hex(x) << "\n"
+#define $ptrn(x) $ptr(x) << "\n"
+
+#define ASSERT_DEV(condition, out)                                                                 \
     do {                                                                                           \
-        std::cerr << #x << ": " << static_cast<int>(x) << "\n";                                                      \
+        std::cerr << "Error: " << out << "\n";                                                     \
+        assert(condition);                                                                         \
     } while (0)
-#define $hex(x)                                                                                    \
-    do {                                                                                           \
-        std::cerr << #x << std::hex << x << "\n";                                                  \
-    } while (0)
-#else
-#define EMPTY_MACRO                                                                                \
-    do {                                                                                           \
-    } while (0)
-#define LOG(msg) EMPTY_MACRO
-#define ERROR(msg) EMPTY_MACRO
-#define eprintf(...) EMPTY_MACRO
-#define $(x) EMPTY_MACRO
-#define $hex(x) EMPTY_MACRO
-#endif
+    

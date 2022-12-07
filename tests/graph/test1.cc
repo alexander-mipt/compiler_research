@@ -70,7 +70,7 @@ TEST_CASE("Test API 3", "[graph3]") {
     std::cerr << d.dump();
 }
 
-TEST_CASE("Test API 4", "[graph3]") {
+TEST_CASE("Test API 4", "[graph4]") {
 
     G::Graph<int, int> d{};
     G::key_t edge_key{1};
@@ -81,6 +81,38 @@ TEST_CASE("Test API 4", "[graph3]") {
 
     std::cerr << d.dump();
 }
+
+/*
+    DFS & RPO test #1
+          ┌───┐
+          │ 1 │
+          └───┘
+            │
+            │
+            ▼
+┌───┐     ┌───┐
+│ 3 │ ◀── │ 2 │
+└───┘     └───┘
+  │         │
+  │         │
+  │         ▼
+  │       ┌───┐     ┌───┐
+  │       │ 6 │ ──▶ │ 7 │
+  │       └───┘     └───┘
+  │         │         │
+  │         │         │
+  │         ▼         │
+  │       ┌───┐       │
+  │       │ 5 │       │
+  │       └───┘       │
+  │         │         │
+  │         │         │
+  │         ▼         │
+  │       ┌───┐       │
+  └─────▶ │ 4 │ ◀─────┘
+          └───┘
+
+*/
 
 TEST_CASE("Test DFS", "[DFS1]") {
 
@@ -97,7 +129,7 @@ TEST_CASE("Test DFS", "[DFS1]") {
     REQUIRE(g.add_edge(10, 6, 7) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(10, 7, 4) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(10, 2, 6) != G::KEY_UNDEF);
-    auto vector = g.DFS(1);
+    auto vector = g.DFS(1, 4);
     auto vector2 = g.RPO(1);
 
     std::cerr << g.dump();
@@ -109,4 +141,35 @@ TEST_CASE("Test DFS", "[DFS1]") {
         std::cerr << elem << "\t";
     }
     std::cerr << "\n";
+}
+
+TEST_CASE("Test graph buffer", "[Gbuf1]") {
+
+    G::Graph<int, int> g{};
+
+    for (key_t i = 1; i <= 7; ++i) {
+        REQUIRE(g.add_node(10) != G::KEY_UNDEF);
+    }
+    REQUIRE(g.add_edge(10, 1, 2) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 2, 3) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 3, 4) != G::KEY_UNDEF);
+    REQUIRE(g.cut_node(2) != G::KEY_UNDEF);
+    REQUIRE(g.cut_edge(3, 4) != G::KEY_UNDEF);
+    REQUIRE(g.cut_node(1) != G::KEY_UNDEF);
+    REQUIRE(g.cut_node(2) == G::KEY_UNDEF);
+    REQUIRE(g.delete_node(2) == G::KEY_UNDEF);
+    // REQUIRE(g.cut_node(3) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 4, 4) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 4, 4) == G::KEY_DUBLICATE);
+    REQUIRE(g.cut_edge(4, 4) != G::KEY_UNDEF);
+    REQUIRE(g.add_node(10) != G::KEY_UNDEF);
+    REQUIRE(g.cut_node(8) != G::KEY_UNDEF);
+    REQUIRE(g.add_node(10) != G::KEY_UNDEF);
+    REQUIRE(g.cut_node(9) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 4, 6) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(10, 6, 3) != G::KEY_UNDEF);
+    REQUIRE(g.cut_node(4) != G::KEY_UNDEF);
+    std::cerr << g.dump();
+    REQUIRE(g.paste_all() != G::KEY_UNDEF);
+    std::cerr << g.dump();
 }

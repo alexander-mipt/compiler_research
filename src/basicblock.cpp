@@ -29,6 +29,17 @@ BasicBlock::~BasicBlock() {
     }
 }
 
+BasicBlock::BasicBlock(BasicBlock&& bb) {
+    for (auto *ptr : bb.m_instrs) {
+        m_instrs.push_back(ptr);
+    }
+    bb.m_instrs.clear();
+    for (auto *ptr : bb.m_phys) {
+        m_phys.push_back(ptr);
+    }
+    bb.m_phys.clear();
+}
+
 id_t BasicBlock::get_id() const { return m_bb_id; }
 BasicBlock::InstrCIt BasicBlock::instr_cbegin() const { return m_instrs.cbegin(); }
 BasicBlock::InstrCIt BasicBlock::instr_cend() const { return m_instrs.cend(); }

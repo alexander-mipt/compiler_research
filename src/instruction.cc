@@ -1,6 +1,5 @@
 #include "basicblock.hpp"
 #include "config.hpp"
-#include "defines.hpp"
 #include "exception"
 #include <sstream>
 namespace IR {
@@ -45,18 +44,15 @@ InstrBase::InputListIt InstrBase::last() {
 }
 id_t InstrBase::get_id() const { return m_id; }
 
+const BasicBlock &InstrBase::get_bb() const {
+    return *m_bb;
+}
+
 void InstrBase::forget_dependencies() {
     m_prev = nullptr;
     m_next = nullptr;
     m_bb = nullptr;
     m_users.clear();
-}
-
-void InstrBase::set_bb(const BasicBlock *bb) {
-    if (bb == nullptr) {
-        throw std::logic_error("Invalid bb ptr");
-    }
-    m_bb = bb;
 }
 
 void InstrBase::push_input(const InstrBase *elem) {
@@ -141,37 +137,19 @@ std::string Instr::dump() const {
 Phy::Phy() : InstrBase() {}
 Phy::Phy(const BasicBlock &bb, id_t id, initList list) : InstrBase(bb, id, list) {}
 
-#if 0
-std::string InstrInput::dump() const {
-    std::stringstream ss{};
-    std::string flow{"???"};
-    if (m_flow == FlowT::DEF) {
-        flow = "def";
-    } else if (m_flow == FlowT::USE) {
-        flow = "use";
-    }
-    ss << "InId: " << m_instr->get_id() << "(" << flow << ")";
-    return ss.str();
-}
 
-// dump inputs
-
-std::string PhiInstr::dump() const {
+std::string Phy::dump() const {
     std::stringstream ss{};
-    ss << "PHI( ";
-    for (auto &elem : m_others) {
-        ss << elem.dump();
-        ss << "\t";
+    ss << "PHY( ";
+    for (const auto *elem : m_users) {
+        ss << elem->get_bb().get_id() << ":" << elem->get_id();
+
+        ss << "; ";
     }
     ss << ")";
     return ss.str();
 }
-// UnaryOp::UnaryOp(opcode_t opcode) : Instr(opcode, TYP_UNARY) {}
-// BinaryOp::BinaryOp(opcode_t opcode) : Instr(opcode, TYP_BINARY) {}
-// CastOp::CastOp(opcode_t opcode) : Instr(opcode, TYP_CAST) {}
-// MemOp::MemOp(opcode_t opcode) : Instr(opcode, TYP_MEM) {}
-// BranchOp::BranchOp(opcode_t opcode) : Instr(opcode, TYP_BRANCH) {}
-#endif
+
 #if 0
 InstrBase::InstrBase(const InstrBase &other)
     : m_opcd(other.m_opcd), m_type(other.m_type), m_id(g_id++), m_bb(other.m_bb),
