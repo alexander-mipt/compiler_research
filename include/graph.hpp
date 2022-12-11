@@ -46,6 +46,8 @@ template <typename N, typename E> class Node {
     N &access_data() &;
     const key_t get_key() const;
     ColorT get_color() const;
+    size_t get_predecessor_count() const;
+    size_t get_successor_count() const;
     key_t key_init();
     // const weight_t get_weight() const;
   protected:
@@ -67,6 +69,9 @@ Node<N, E>::Node(N &&data, const Graph<N, E> &g) : m_data(std::move(data)), m_gr
 template <typename N, typename E> void Node<N, E>::set_color(ColorT c) { m_color = c; }
 
 template <typename N, typename E> ColorT Node<N, E>::get_color() const { return m_color; }
+
+template <typename N, typename E> size_t Node<N, E>::get_successor_count() const { return m_successors.size(); }
+template <typename N, typename E> size_t Node<N, E>::get_predecessor_count() const { return m_predecessors.size(); }
 
 template <typename N, typename E>
 typename std::map<key_t, Node<N, E> *>::iterator Node<N, E>::predecessors_begin() {
@@ -213,6 +218,7 @@ template <typename N, typename E> class Graph {
     virtual ~Graph();
 
     virtual key_t add_node(N &&node_data);
+    virtual key_t add_nodes(N &&node_data, size_t count);
     virtual key_t delete_node(key_t node_key);
     virtual key_t add_edge(E &&edge_data, key_t start_node_key, key_t end_node_key);
     virtual key_t delete_edge(key_t start_node_key, key_t end_node_key);
@@ -220,9 +226,10 @@ template <typename N, typename E> class Graph {
     virtual key_t cut_edge(key_t start_node_key, key_t end_node_key);
     virtual key_t paste_all();
     
-    std::optional<Node<N, E> &> access_node(key_t node_key);
+    Node<N,E>* at(key_t node_key);
 
     std::vector<key_t> DFS(key_t root_key, key_t end_key = KEY_UNDEF);
+    bool hasPath(key_t start, key_t end);
     std::vector<key_t> RPO(key_t root_key);
     std::vector<key_t> getDominatedNodes(key_t root_key, key_t target_node);
 
@@ -230,6 +237,7 @@ template <typename N, typename E> class Graph {
     virtual std::string dump() const;
     key_t get_avail_nd_key() const;
     key_t get_avail_edg_key() const;
+    size_t get_node_count() const;
 
     friend key_t Node<N, E>::add_predecessor(key_t p_key);
     friend key_t Node<N, E>::add_successor(key_t s_key);
@@ -274,6 +282,15 @@ template <typename N, typename E> key_t Graph<N, E>::add_node(N &&node_data) {
     }
     m_actual_node_key++;
     return node_key;
+}
+
+template <typename N, typename E> key_t Graph<N, E>::add_nodes(N &&node_data, size_t count) {
+    for (size_t i = 0; i < count; ++i) {
+        auto key = add_node(std::move(node_data));
+        if (key == KEY_UNDEF) {
+            return KEY_UNDEF;
+        }
+    }
 }
 
 template <typename N, typename E> key_t Graph<N, E>::delete_node(key_t node_key) {
@@ -552,13 +569,13 @@ template <typename N, typename E> key_t Graph<N, E>::delete_edge(key_t edge_key)
     return edge_key;
 }
 
-template <typename N, typename E> std::optional<Node<N, E> &> Graph<N, E>::access_node(key_t key) {
+template <typename N, typename E> Node<N, E>* Graph<N, E>::at(key_t key) {
     auto res = m_nodes.find(key);
     if (res == m_nodes.end()) {
         ERROR("No such node key");
-        return std::nullopt;
+        return nullptr;
     }
-    return {*res->second};
+    return res->second;
 }
 
 template <typename N, typename E> bool Graph<N, E>::node_exists(key_t key) const {
@@ -566,6 +583,10 @@ template <typename N, typename E> bool Graph<N, E>::node_exists(key_t key) const
         return false;
     }
     return true;
+}
+
+template <typename N, typename E> size_t Graph<N, E>::get_node_count() const {
+    return m_nodes.size();
 }
 
 template <typename N, typename E> Graph<N, E>::~Graph() {
@@ -704,17 +725,17 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::getDominatedNo
         return std::vector<key_t>{KEY_UNDEF};
     }
     std::vector<key_t> origin = DFS(root_key);
-    for (auto x: origin) {
-        std::cerr << x << " ";
-    }
-    std::cerr << "\n";
+    // for (auto x: origin) {
+    //     std::cerr << x << " ";
+    // }
+    // std::cerr << "\n";
     // std::set<key_t> initial_nodes(tmp.begin(), tmp.end());
     cut_node(target_key);
     std::vector<key_t> reduced = DFS(root_key);
-    for (auto x: reduced) {
-        std::cerr << x << " ";
-    }
-    std::cerr << "\n";
+    // for (auto x: reduced) {
+    //     std::cerr << x << " ";
+    // }
+    // std::cerr << "\n";
     for (auto node_key: reduced) {
         for (auto it = origin.begin(); it != origin.end(); ++it) {
             if (*it == node_key) {
@@ -725,6 +746,15 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::getDominatedNo
     }
     paste_all();
     return origin;
+}
+
+template <typename N, typename E>
+bool Graph<N,E>::hasPath(key_t start, key_t end) {
+    auto path = DFS(start, end);
+    if (path.size() == 0 || path.back() != end) {
+        return false;
+    }
+    return true;
 }
 
 } // namespace G
