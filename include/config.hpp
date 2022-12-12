@@ -3,19 +3,21 @@
 #include <cstdio>
 #include <iostream>
 
-#ifndef NDEBUG
+#ifndef NDEBUG_DEV
 #define OPT(expr) expr
 #else
-#define OPT(expr)
+#define OPT(expr)                                                                                  \
+    do {                                                                                           \
+    } while (0)
 #endif
 
 #define LOG(msg)                                                                                   \
     do {                                                                                           \
-        std::cerr << "[LOG] " << msg << "\n";                                                     \
+        std::cerr << "[LOG] " << msg << "\n";                                                      \
     } while (0)
-#define LOGarg(msg, arg)                                                                              \
+#define LOGarg(msg, arg)                                                                           \
     do {                                                                                           \
-        std::cerr << "[LOG] " << msg << " " << arg << "\n";                                       \
+        std::cerr << "[LOG] " << msg << " " << arg << "\n";                                        \
     } while (0)
 #define ERROR(msg)                                                                                 \
     do {                                                                                           \
@@ -38,6 +40,8 @@
 
 #define ASSERT_DEV(condition, out)                                                                 \
     do {                                                                                           \
-        std::cerr << "Error: " << out << "\n";                                                     \
+        if (!(condition)) {                                                                          \
+            std::cerr << "Error: " << out << "\n";                                                 \
+        }                                                                                          \
         assert(condition);                                                                         \
     } while (0)

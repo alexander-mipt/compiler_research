@@ -9,7 +9,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
 namespace G {
 using key_t = long long;
 constexpr key_t KEY_UNDEF = 0;
@@ -23,10 +22,14 @@ enum class ColorT {
 };
 
 struct Cycle {
+    Cycle() = default;
+    Cycle(key_t head_id, key_t back_edge_id, key_t back_edge_start_id, bool reducible);
+    std::string dump() const;
     key_t head_node{KEY_UNDEF};
     key_t back_edge{KEY_UNDEF};
     key_t back_edge_start{KEY_UNDEF};
-    bool reducible{false};
+    bool is_reducible{false};
+    std::vector<key_t> blocks{};
 };
 
 using weight_t = int;
@@ -116,7 +119,7 @@ typename std::map<key_t, Node<N, E> *>::iterator Node<N, E>::successors_end() {
 
 template <typename N, typename E> key_t Node<N, E>::key_init() {
     if (m_key != KEY_UNDEF) {
-        ERROR("Node has already been inited");
+        OPT(LOG("Node has already been inited"));
         return KEY_UNDEF;
     }
     key_t key = m_graph->get_avail_nd_key();
@@ -127,16 +130,16 @@ template <typename N, typename E> key_t Node<N, E>::key_init() {
 template <typename N, typename E> key_t Node<N, E>::add_successor(key_t s_key) {
     auto find_result = m_graph->m_nodes.find(s_key);
     if (find_result == m_graph->m_nodes.end()) {
-        ERROR("Wrong successor key");
+        OPT(LOG("Wrong successor key"));
         return KEY_UNDEF;
     }
     const Node<N, E> *nptr = find_result->second;
     if (nptr == nullptr) {
-        ERROR("Successor search returns NULL");
+        OPT(LOG("Successor search returns NULL"));
         return KEY_UNDEF;
     }
     if (!m_successors.insert(std::make_pair(s_key, const_cast<Node<N, E> *>(nptr))).second) {
-        LOG("Successor has already existed");
+        OPT(LOG("Successor has already existed"));
         return KEY_DUBLICATE;
     }
     return s_key;
@@ -145,16 +148,16 @@ template <typename N, typename E> key_t Node<N, E>::add_successor(key_t s_key) {
 template <typename N, typename E> key_t Node<N, E>::add_predecessor(key_t p_key) {
     auto find_result = m_graph->m_nodes.find(p_key);
     if (find_result == m_graph->m_nodes.end()) {
-        ERROR("Wrong predecessor key");
+        OPT(LOG("Wrong predecessor key"));
         return KEY_UNDEF;
     }
     const Node<N, E> *nptr = find_result->second;
     if (nptr == nullptr) {
-        ERROR("Predecessor search returns NULL");
+        OPT(LOG("Predecessor search returns NULL"));
         return KEY_UNDEF;
     }
     if (!m_predecessors.insert(std::make_pair(p_key, const_cast<Node<N, E> *>(nptr))).second) {
-        LOG("Predecessor has already existed");
+        OPT(LOG("Predecessor has already existed"));
         return KEY_DUBLICATE;
     }
     return p_key;
@@ -163,7 +166,7 @@ template <typename N, typename E> key_t Node<N, E>::add_predecessor(key_t p_key)
 template <typename N, typename E> key_t Node<N, E>::delete_successor(key_t s_key) {
     auto find_result = m_successors.find(s_key);
     if (find_result == m_successors.end()) {
-        ERROR("Wrong successor key");
+        OPT(LOG("Wrong successor key"));
         return KEY_UNDEF;
     }
     m_successors.erase(s_key);
@@ -173,7 +176,7 @@ template <typename N, typename E> key_t Node<N, E>::delete_successor(key_t s_key
 template <typename N, typename E> key_t Node<N, E>::delete_predecessor(key_t p_key) {
     auto find_result = m_predecessors.find(p_key);
     if (find_result == m_predecessors.end()) {
-        ERROR("Wrong predecessor key");
+        OPT(LOG("Wrong predecessor key"));
         return KEY_UNDEF;
     }
     m_predecessors.erase(p_key);
@@ -212,7 +215,7 @@ Edge<N, E>::Edge(E &&data, const Graph<N, E> &g, key_t start_node_key, key_t end
 
 template <typename N, typename E> key_t Edge<N, E>::key_init() {
     if (m_key != KEY_UNDEF) {
-        ERROR("Node has already been inited");
+        OPT(LOG("Node has already been inited"));
         return KEY_UNDEF;
     }
     key_t key = m_graph->get_avail_edg_key();
@@ -248,6 +251,8 @@ template <typename N, typename E> class Graph {
     virtual key_t cut_node(key_t node_key);
     virtual key_t cut_edge(key_t start_node_key, key_t end_node_key);
     virtual key_t paste_all();
+    virtual typename std::map<key_t, Node<N, E> *>::iterator nodes_begin();
+    virtual typename std::map<key_t, Node<N, E> *>::iterator nodes_end();
 
     Node<N, E> *at(key_t node_key);
 
@@ -290,6 +295,11 @@ template <typename N, typename E> class Graph {
     std::map<key_t, Edge<N, E> *> m_edges_buf{};
 };
 
+template<typename N, typename E>
+typename std::map<key_t, Node<N, E> *>::iterator Graph<N,E>::nodes_begin() { return m_nodes.begin(); }
+template<typename N, typename E>
+typename std::map<key_t, Node<N, E> *>::iterator Graph<N,E>::nodes_end() { return m_nodes.end(); }
+
 template <typename N, typename E> key_t Graph<N, E>::get_avail_nd_key() const {
     return m_actual_node_key;
 }
@@ -303,7 +313,7 @@ template <typename N, typename E> key_t Graph<N, E>::add_node(N &&node_data) {
     key_t node_key = nptr->key_init();
     auto node_insertion_result = m_nodes.insert(std::make_pair(node_key, nptr));
     if (!node_insertion_result.second) {
-        ERROR("Cannot insert node w/ given key");
+        OPT(LOG("Cannot insert node w/ given key"));
         delete nptr;
         return KEY_UNDEF;
     }
@@ -314,7 +324,7 @@ template <typename N, typename E> key_t Graph<N, E>::add_node(N &&node_data) {
 template <typename N, typename E> key_t Graph<N, E>::add_node(N &&node_data, key_t key) {
     auto node_find_result = m_nodes.find(key);
     if (node_find_result != m_nodes.end()) {
-        ERROR("Wrong node key");
+        OPT(LOG("Wrong node key"));
         return KEY_UNDEF;
     }
     m_actual_node_key = std::max(key, m_actual_node_key);
@@ -322,7 +332,7 @@ template <typename N, typename E> key_t Graph<N, E>::add_node(N &&node_data, key
     key_t node_key = nptr->set_key(key);
     auto node_insertion_result = m_nodes.insert(std::make_pair(node_key, nptr));
     if (!node_insertion_result.second) {
-        ERROR("Cannot insert node w/ given key");
+        OPT(LOG("Cannot insert node w/ given key"));
         delete nptr;
         return KEY_UNDEF;
     }
@@ -344,7 +354,7 @@ template <typename N, typename E> key_t Graph<N, E>::delete_node(key_t node_key)
     // find node X by key
     auto node_find_result = m_nodes.find(node_key);
     if (node_find_result == m_nodes.end()) {
-        ERROR("Wrong node key");
+        OPT(LOG("Wrong node key"));
         return KEY_UNDEF;
     }
     std::vector<key_t> edges_to_delete{};
@@ -367,7 +377,7 @@ template <typename N, typename E> key_t Graph<N, E>::delete_node(key_t node_key)
 template <typename N, typename E> key_t Graph<N, E>::cut_node(key_t node_key) {
     auto node_find_result = m_nodes.find(node_key);
     if (node_find_result == m_nodes.end()) {
-        ERROR("Wrong node key");
+        OPT(LOG("Wrong node key"));
         return KEY_UNDEF;
     }
     std::vector<key_t> edges_to_cut{};
@@ -390,7 +400,7 @@ template <typename N, typename E> key_t Graph<N, E>::cut_node(key_t node_key) {
 template <typename N, typename E> key_t Graph<N, E>::cut_edge(key_t edge_key) {
     auto result = m_edges.find(edge_key);
     if (result == m_edges.end()) {
-        ERROR("No such edge");
+        OPT(LOG("No such edge"));
         return KEY_UNDEF;
     }
 
@@ -398,13 +408,13 @@ template <typename N, typename E> key_t Graph<N, E>::cut_edge(key_t edge_key) {
     key_t end_node_key = result->second->get_end_node_key();
     if (m_nodes.find(start_node_key) == m_nodes.end() ||
         m_nodes.find(end_node_key) == m_nodes.end()) {
-        ERROR("No start/end node - cannot cut edge");
+        OPT(LOG("No start/end node - cannot cut edge"));
     }
 
     key_t key1 = m_nodes.at(start_node_key)->delete_successor(end_node_key);
     key_t key2 = m_nodes.at(end_node_key)->delete_predecessor(start_node_key);
     if (key1 == KEY_UNDEF || key2 == KEY_UNDEF) {
-        ERROR("Cannot delete Successor/Predecessor during cut");
+        OPT(LOG("Cannot delete Successor/Predecessor during cut"));
         return KEY_UNDEF;
     }
 
@@ -418,12 +428,12 @@ key_t Graph<N, E>::cut_edge(key_t start_node_key, key_t end_node_key) {
     using edge_item_t = std::pair<key_t, Edge<N, E> *>;
     auto output_node_it = m_nodes.find(start_node_key);
     if (output_node_it == m_nodes.end()) {
-        ERROR("Wrong start node key");
+        OPT(LOG("Wrong start node key"));
         return KEY_UNDEF;
     }
     auto input_node_it = m_nodes.find(end_node_key);
     if (input_node_it == m_nodes.end()) {
-        ERROR("Wrong end node key");
+        OPT(LOG("Wrong end node key"));
         return KEY_UNDEF;
     }
     for (auto &item : m_edges) {
@@ -434,7 +444,7 @@ key_t Graph<N, E>::cut_edge(key_t start_node_key, key_t end_node_key) {
             return cut_edge(edge_key);
         }
     }
-    ERROR("No edges selected for cut");
+    OPT(LOG("No edges selected for cut"));
     return KEY_UNDEF;
 }
 
@@ -443,12 +453,12 @@ key_t Graph<N, E>::get_edge_id(key_t start_node_key, key_t end_node_key) const {
     using edge_item_t = std::pair<key_t, Edge<N, E> *>;
     auto output_node_it = m_nodes.find(start_node_key);
     if (output_node_it == m_nodes.end()) {
-        ERROR("Wrong start node key");
+        OPT(LOG("Wrong start node key"));
         return KEY_UNDEF;
     }
     auto input_node_it = m_nodes.find(end_node_key);
     if (input_node_it == m_nodes.end()) {
-        ERROR("Wrong end node key");
+        OPT(LOG("Wrong end node key"));
         return KEY_UNDEF;
     }
     for (auto &item : m_edges) {
@@ -459,7 +469,7 @@ key_t Graph<N, E>::get_edge_id(key_t start_node_key, key_t end_node_key) const {
             return edge_key;
         }
     }
-    ERROR("No edges selected for cut");
+    OPT(LOG("No edges selected for cut"));
     return KEY_UNDEF;
 }
 
@@ -468,12 +478,12 @@ key_t Graph<N, E>::add_edge(E &&edge_data, key_t start_node_key, key_t end_node_
     // check if nodes exist
     auto start_node_it = m_nodes.find(start_node_key);
     if (start_node_it == m_nodes.end()) {
-        ERROR("Wrong start node key");
+        OPT(LOG("Wrong start node key"));
         return KEY_UNDEF;
     }
     auto end_node_it = m_nodes.find(end_node_key);
     if (end_node_it == m_nodes.end()) {
-        ERROR("Wrong end node key");
+        OPT(LOG("Wrong end node key"));
         return KEY_UNDEF;
     }
 
@@ -481,18 +491,18 @@ key_t Graph<N, E>::add_edge(E &&edge_data, key_t start_node_key, key_t end_node_
     key_t key2 = end_node_it->second->add_predecessor(start_node_key);
 
     if (key1 == KEY_DUBLICATE && key2 == KEY_DUBLICATE) {
-        LOG("Such edge has already exists");
+        OPT(LOG("Such edge has already exists"));
         return KEY_DUBLICATE;
     } else if (key1 == KEY_DUBLICATE || key2 == KEY_DUBLICATE || key1 == KEY_UNDEF ||
                key2 == KEY_UNDEF) {
-        ERROR("Successor & Predecessor have corrupted data");
+        OPT(LOG("Successor & Predecessor have corrupted data"));
         return KEY_UNDEF;
     }
 
     Edge<N, E> *eptr = new Edge<N, E>{std::move(edge_data), *this, start_node_key, end_node_key};
     key_t edge_key = eptr->key_init();
     if (!m_edges.insert(std::make_pair(edge_key, eptr)).second) {
-        ERROR("Cannot insert edge w/ given key");
+        OPT(LOG("Cannot insert edge w/ given key"));
         delete eptr;
         return KEY_UNDEF;
     }
@@ -506,12 +516,12 @@ key_t Graph<N, E>::paste_edge(key_t start_node_key, key_t end_node_key) {
     // check if nodes exist
     auto start_node_it = m_nodes.find(start_node_key);
     if (start_node_it == m_nodes.end()) {
-        ERROR("Wrong start node key");
+        OPT(LOG("Wrong start node key"));
         return KEY_UNDEF;
     }
     auto end_node_it = m_nodes.find(end_node_key);
     if (end_node_it == m_nodes.end()) {
-        ERROR("Wrong end node key");
+        OPT(LOG("Wrong end node key"));
         return KEY_UNDEF;
     }
 
@@ -524,7 +534,7 @@ key_t Graph<N, E>::paste_edge(key_t start_node_key, key_t end_node_key) {
         }
     }
     if (edge_key == KEY_UNDEF) {
-        ERROR("No such edge in buffer");
+        OPT(LOG("No such edge in buffer"));
         return KEY_UNDEF
     }
     return paste_edge(edge_key);
@@ -534,18 +544,18 @@ key_t Graph<N, E>::paste_edge(key_t start_node_key, key_t end_node_key) {
 template <typename N, typename E> key_t Graph<N, E>::paste_edge(key_t edge_key) {
     auto edge_it = m_edges_buf.find(edge_key);
     if (edge_it == m_edges_buf.end()) {
-        ERROR("No such edge in buf");
+        OPT(LOG("No such edge in buf"));
         return KEY_UNDEF;
     }
     if (m_edges.find(edge_key) != m_edges.end()) {
-        ERROR("Edge cannot be pasted");
+        OPT(LOG("Edge cannot be pasted"));
         return KEY_UNDEF;
     }
     key_t start_node_key = edge_it->second->get_start_node_key();
     key_t end_node_key = edge_it->second->get_end_node_key();
     if (m_nodes.find(start_node_key) == m_nodes.end() ||
         m_nodes.find(end_node_key) == m_nodes.end()) {
-        ERROR("No nodes for pasted edge");
+        OPT(LOG("No nodes for pasted edge"));
         return KEY_UNDEF;
     }
     m_edges.insert(std::make_pair(edge_it->first, edge_it->second));
@@ -555,7 +565,7 @@ template <typename N, typename E> key_t Graph<N, E>::paste_edge(key_t edge_key) 
     key_t key1 = start_node->add_successor(end_node_key);
     key_t key2 = end_node->add_predecessor(start_node_key);
     if (key1 == KEY_UNDEF || key2 == KEY_UNDEF) {
-        ERROR("Cannot delete Successor/Predecessor during paste");
+        OPT(LOG("Cannot delete Successor/Predecessor during paste"));
     }
     return edge_key;
 }
@@ -563,12 +573,12 @@ template <typename N, typename E> key_t Graph<N, E>::paste_edge(key_t edge_key) 
 template <typename N, typename E> key_t Graph<N, E>::paste_node(key_t node_key) {
     auto node_find_result = m_nodes_buf.find(node_key);
     if (node_find_result == m_nodes_buf.end()) {
-        ERROR("Wrong pasted node key");
+        OPT(LOG("Wrong pasted node key"));
         return KEY_UNDEF;
     }
 
     if (m_nodes.find(node_key) != m_nodes.end()) {
-        ERROR("Cannot paste node - already exists in node list");
+        OPT(LOG("Cannot paste node - already exists in node list"));
         return KEY_UNDEF;
     }
 
@@ -582,14 +592,14 @@ template <typename N, typename E> key_t Graph<N, E>::paste_all() {
     while (m_nodes_buf.size()) {
         key_t key = m_nodes_buf.rbegin()->first;
         if (paste_node(key) == KEY_UNDEF) {
-            ERROR("Error during pasting node");
+            OPT(LOG("Error during pasting node"));
             return KEY_UNDEF;
         }
     }
     while (m_edges_buf.size()) {
         key_t key = m_edges_buf.rbegin()->first;
         if (paste_edge(key) == KEY_UNDEF) {
-            ERROR("Error during pasting edge");
+            OPT(LOG("Error during pasting edge"));
             return KEY_UNDEF;
         }
     }
@@ -601,12 +611,12 @@ key_t Graph<N, E>::delete_edge(key_t start_node_key, key_t end_node_key) {
     using edge_item_t = std::pair<key_t, Edge<N, E> *>;
     auto output_node_it = m_nodes.find(start_node_key);
     if (output_node_it == m_nodes.end()) {
-        ERROR("Wrong start node key");
+        OPT(LOG("Wrong start node key"));
         return KEY_UNDEF;
     }
     auto input_node_it = m_nodes.find(end_node_key);
     if (input_node_it == m_nodes.end()) {
-        ERROR("Wrong end node key");
+        OPT(LOG("Wrong end node key"));
         return KEY_UNDEF;
     }
     for (auto &item : m_edges) {
@@ -617,20 +627,20 @@ key_t Graph<N, E>::delete_edge(key_t start_node_key, key_t end_node_key) {
             key_t key1 = m_nodes.at(start_node_key)->delete_successor(end_node_key);
             key_t key2 = m_nodes.at(end_node_key)->delete_predecessor(start_node_key);
             if (key1 == KEY_UNDEF || key2 == KEY_UNDEF) {
-                ERROR("Cannot delete Successor / Predecessor");
+                OPT(LOG("Cannot delete Successor / Predecessor"));
                 return KEY_UNDEF;
             }
             return delete_edge(edge_key);
         }
     }
-    ERROR("No edges selected");
+    OPT(LOG("No edges selected"));
     return KEY_UNDEF;
 }
 
 template <typename N, typename E> key_t Graph<N, E>::delete_edge(key_t edge_key) {
     auto result = m_edges.find(edge_key);
     if (result == m_edges.end()) {
-        ERROR("No such edge");
+        OPT(LOG("No such edge"));
         return KEY_UNDEF;
     }
     m_edges.erase(edge_key);
@@ -641,7 +651,7 @@ template <typename N, typename E> key_t Graph<N, E>::delete_edge(key_t edge_key)
 template <typename N, typename E> Node<N, E> *Graph<N, E>::at(key_t key) {
     auto res = m_nodes.find(key);
     if (res == m_nodes.end()) {
-        ERROR("No such node key");
+        OPT(LOG("No such node key"));
         return nullptr;
     }
     return res->second;
@@ -697,7 +707,7 @@ template <typename N, typename E>
 std::vector<key_t> Graph<N, E>::DFS(key_t root_key, key_t end_key) {
     auto res = m_nodes.find(root_key);
     if (res == m_nodes.end()) {
-        ERROR("No such node key");
+        OPT(LOG("No such node key"));
         return {};
     }
     std::vector<ColorT> colors = preserve_colors_();
@@ -736,7 +746,7 @@ template <typename N, typename E>
 std::vector<Cycle> Graph<N, E>::get_cycles(key_t root_key, key_t end_key) {
     auto res = m_nodes.find(root_key);
     if (res == m_nodes.end()) {
-        ERROR("No such node key");
+        OPT(LOG("No such node key"));
         return {};
     }
     std::vector<ColorT> colors = preserve_colors_();
@@ -748,7 +758,7 @@ std::vector<Cycle> Graph<N, E>::get_cycles(key_t root_key, key_t end_key) {
     recover_colors_(colors);
     for (auto &cycle : vec) {
         if (is_a_dominates_b(root_key, cycle.head_node, cycle.back_edge_start)) {
-            cycle.reducible = true;
+            cycle.is_reducible = true;
         }
     }
     // recover_colors_(colors);
@@ -770,7 +780,7 @@ std::vector<Cycle> Graph<N, E>::get_cycles_(Node<N, E> &nd, key_t root_key, key_
             key_t edge_key = get_edge_id(backedge_start, backedge_end);
             key_t head_key = backedge_end;
             // bool reducible = !is_a_dominates_b(root_key, backedge_end, backedge_start);
-            Cycle c = {head_key, edge_key, backedge_start, false};
+            Cycle c{head_key, edge_key, backedge_start, false};
             vec.push_back(c);
         }
         if (it->second->get_color() == ColorT::WHITE) {
@@ -797,7 +807,7 @@ template <typename N, typename E> std::vector<ColorT> Graph<N, E>::preserve_colo
 template <typename N, typename E>
 void Graph<N, E>::recover_colors_(const std::vector<ColorT> &vec) {
     if (vec.size() != m_nodes.size()) {
-        ERROR("Wrong countity of colors");
+        OPT(LOG("Wrong countity of colors"));
         return;
     }
 
@@ -810,7 +820,7 @@ void Graph<N, E>::recover_colors_(const std::vector<ColorT> &vec) {
 template <typename N, typename E> std::vector<key_t> Graph<N, E>::RPO(key_t root_key) {
     auto res = m_nodes.find(root_key);
     if (res == m_nodes.end()) {
-        ERROR("No such node key");
+        OPT(LOG("No such node key"));
         return {};
     }
     std::vector<key_t> vec{};
@@ -843,12 +853,12 @@ template <typename N, typename E>
 std::vector<key_t> Graph<N, E>::getDominatedNodes(key_t root_key, key_t target_key) {
     auto res = m_nodes.find(root_key);
     if (res == m_nodes.end()) {
-        ERROR("No such root key");
+        OPT(LOG("No such root key"));
         return std::vector<key_t>{KEY_UNDEF};
     }
     res = m_nodes.find(target_key);
     if (res == m_nodes.end()) {
-        ERROR("No such target key");
+        OPT(LOG("No such target key"));
         return std::vector<key_t>{KEY_UNDEF};
     }
     std::vector<key_t> origin = DFS(root_key);

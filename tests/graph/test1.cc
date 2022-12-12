@@ -1,6 +1,7 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 #include "graph.hpp"
+#include "LoopTreeBuilder.hpp"
 
 TEST_CASE("Test API 1", "[graph1]") {
     G::Graph<int, int> g{};
@@ -495,6 +496,7 @@ TEST_CASE("Test graph buffer", "[Gbuf1]") {
 
 TEST_CASE("Test loop", "[LOOPS_1]") {
     // create SSA graph
+    OPT(LOG("LOGGING IS ENABLED"));
     G::Graph<int, int> g{};
     REQUIRE(g.add_nodes(0, 11) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 1, 2) != G::KEY_UNDEF);
@@ -513,47 +515,67 @@ TEST_CASE("Test loop", "[LOOPS_1]") {
     REQUIRE(g.add_edge(0, 9, 11) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 10, 11) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 11, 10) != G::KEY_UNDEF);
-
+#if 0
+    REQUIRE(g.add_edge(0, 8, 12) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 12, 13) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 13, 14) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 14, 15) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 15, 13) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 14, 13) != G::KEY_UNDEF);
+#endif
     G::Graph<G::Cycle, int> loops{};
     std::cerr << g.dump();
-    auto v = g.get_cycles(1, -1);
-    for (auto &cycle : v) {
-        std::cout << "Cycle:\n";
-        std::cout << cycle.head_node << "\t";
-        std::cout << cycle.back_edge_start << "\t";
-        std::cout << cycle.reducible << "\n";
-        loops.add_node(std::move(cycle), cycle.back_edge_start);
-    }
+    // auto v = g.get_cycles(1, -1);
+    // for (auto &cycle : v) {
+    //     std::cout << "Cycle:\n";
+    //     std::cout << cycle.head_node << "\t";
+    //     std::cout << cycle.back_edge_start << "\t";
+    //     std::cout << cycle.is_reducible << "\n";
+    //     loops.add_node(std::move(cycle), cycle.back_edge_start);
+    // }
 
-    auto vector2 = g.RPO(1);
-    for (auto elem : vector2) {
-        std::cout << elem << "\t";
-    }
-    std::cout << "\n";
-    auto vector3 = g.DFS(1);
-    for (auto elem : vector3) {
-        std::cout << elem << "\t";
-    }
-    std::cout << "\n";
+    // auto vector2 = g.RPO(1);
+    // for (auto elem : vector2) {
+    //     std::cout << elem << "\t";
+    // }
+    // std::cout << "\n";
+    // auto vector3 = g.DFS(1);
+    // for (auto elem : vector3) {
+    //     std::cout << elem << "\t";
+    // }
+    // std::cout << "\n";
 
-    for (auto it = vector2.rbegin(), rend = vector2.rend(); it != rend; ++it) {
-        if (!loops.node_exists(*it) /*|| !loops.at(*it)->access_data().reducible*/) {
-            LOGarg("Continue:", loops.node_exists(*it));
-            continue;
-        }
-        auto current_loop = *it;
-        LOGarg("Work with loop", current_loop);
-        for (auto key : g.DFS(loops.at(current_loop)->access_data().back_edge_start)) {
-            LOGarg("\tfound block:", key);
-            if (g.at(key)->get_loop() == G::KEY_UNDEF) {
-                g.at(key)->set_loop(current_loop);
-            } else {
-                auto outer_loop = g.at(key)->get_loop();
-                g.at(key)->set_loop(current_loop);
-                std::cout << "Adding edge" << outer_loop << " -> " << current_loop << std::endl;
-                loops.add_edge(0, outer_loop, current_loop);
-            }
-        }
-    }
+    // for (auto it = vector2.rbegin(), rend = vector2.rend(); it != rend; ++it) {
+    //     if (!loops.node_exists(*it) /*|| !loops.at(*it)->access_data().reducible*/) {
+    //         LOGarg("Continue:", loops.node_exists(*it));
+    //         continue;
+    //     }
+    //     auto current_loop = *it;
+    //     LOGarg("Work with loop", current_loop);
+    //     for (auto key : g.DFS(loops.at(current_loop)->access_data().back_edge_start)) {
+    //         LOGarg("\tfound block:", key);
+    //         if (g.at(key)->get_loop() == G::KEY_UNDEF) {
+    //             g.at(key)->set_loop(current_loop);
+    //         } else {
+    //             auto outer_loop = g.at(key)->get_loop();
+    //             g.at(key)->set_loop(current_loop);
+    //             std::cout << "Adding edge" << outer_loop << " -> " << current_loop << std::endl;
+    //             loops.add_edge(0, outer_loop, current_loop);
+    //         }
+    //     }
+    // }
+    // std::cout << loops.dump();
+    Analysis::buildLoopTree(&g, &loops);
     std::cout << loops.dump();
+    #if 0
+    std::cout << "Blocks:\n";
+    for (auto it = loops.nodes_begin(); it != loops.nodes_end(); ++it) {
+        std::cout << "loop: " << it->first << " ";
+        for (auto &block: it->second->access_data().blocks) {
+            std::cout << block << "\t";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+#endif
 }
