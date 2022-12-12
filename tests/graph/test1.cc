@@ -450,3 +450,110 @@ TEST_CASE("Test graph buffer", "[Gbuf1]") {
     REQUIRE(g.paste_all() != G::KEY_UNDEF);
     std::cerr << g.dump();
 }
+
+/*
+                  ┌────┐
+             ┌──▶ │ 1  │
+             │    └────┘
+             │      │
+             │ 11   │ 1
+             │      ▼
+┌───┐  3     │    ┌────┐
+│ 4 │ ◀──────┼─── │ 2  │ ◀┐
+└───┘        │    └────┘  │
+  │          │      │     │
+  │          │      │ 2   │ 10
+  │          │      ▼     │
+  │          │    ┌────┐  │     9     ┌─────┐
+  │          │    │ 3  │ ─┼─────────▶ │  9  │ ─┐
+  │          │    └────┘  │           └─────┘  │
+  │          │      │     │             │      │
+  │          │      │ 4   │             │ 12   │
+  │          │      ▼     │             ▼      │
+  │   5      │    ┌────┐  │           ┌─────┐  │
+  └──────────┼──▶ │ 5  │  │      ┌──▶ │ 10  │  │ 13
+             │    └────┘  │      │    └─────┘  │
+             │      │     │      │      │      │
+             │      │ 6   │      │ 15   │ 14   │
+             │      ▼     │      │      ▼      │
+             │    ┌────┐  │      │    ┌─────┐  │
+             │    │ 6  │  │      └─── │ 11  │ ◀┘
+             │    └────┘  │           └─────┘
+             │      │     │
+             │      │ 7   │
+             │      ▼     │
+             │    ┌────┐  │
+             │    │ 7  │ ─┘
+             │    └────┘
+             │      │
+             │      │ 8
+             │      ▼
+             │    ┌────┐
+             └─── │ 8  │
+                  └────┘
+*/
+
+TEST_CASE("Test loop", "[LOOPS_1]") {
+    // create SSA graph
+    G::Graph<int, int> g{};
+    REQUIRE(g.add_nodes(0, 11) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 1, 2) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 2, 3) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 2, 4) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 3, 5) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 4, 5) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 5, 6) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 6, 7) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 7, 8) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 3, 9) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 7, 2) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 8, 1) != G::KEY_UNDEF);
+
+    REQUIRE(g.add_edge(0, 9, 10) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 9, 11) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 10, 11) != G::KEY_UNDEF);
+    REQUIRE(g.add_edge(0, 11, 10) != G::KEY_UNDEF);
+
+    G::Graph<G::Cycle, int> loops{};
+    std::cerr << g.dump();
+    auto v = g.get_cycles(1, -1);
+    for (auto &cycle : v) {
+        std::cout << "Cycle:\n";
+        std::cout << cycle.head_node << "\t";
+        std::cout << cycle.back_edge_start << "\t";
+        std::cout << cycle.reducible << "\n";
+        loops.add_node(std::move(cycle), cycle.back_edge_start);
+    }
+
+    auto vector2 = g.RPO(1);
+    for (auto elem : vector2) {
+        std::cout << elem << "\t";
+    }
+    std::cout << "\n";
+    auto vector3 = g.DFS(1);
+    for (auto elem : vector3) {
+        std::cout << elem << "\t";
+    }
+    std::cout << "\n";
+
+    for (auto it = vector2.rbegin(), rend = vector2.rend(); it != rend; ++it) {
+        if (!loops.node_exists(*it) /*|| !loops.at(*it)->access_data().reducible*/) {
+            LOGarg("Continue:", loops.node_exists(*it));
+            continue;
+        }
+        auto current_loop = *it;
+        LOGarg("Work with loop", current_loop);
+        for (auto key : g.DFS(loops.at(current_loop)->access_data().back_edge_start)) {
+            LOGarg("\tfound block:", key);
+            if (g.at(key)->get_loop() == G::KEY_UNDEF) {
+                g.at(key)->set_loop(current_loop);
+            } else {
+                auto outer_loop = g.at(key)->get_loop();
+                g.at(key)->set_loop(current_loop);
+                std::cout << "Adding edge" << outer_loop << " -> " << current_loop << std::endl;
+                loops.add_edge(0, outer_loop, current_loop);
+            }
+        }
+    }
+    std::cout << loops.dump();
+}

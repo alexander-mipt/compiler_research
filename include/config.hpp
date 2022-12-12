@@ -11,7 +11,11 @@
 
 #define LOG(msg)                                                                                   \
     do {                                                                                           \
-        std::cerr << "[LOG] " << #msg << "\n";                                                     \
+        std::cerr << "[LOG] " << msg << "\n";                                                     \
+    } while (0)
+#define LOGarg(msg, arg)                                                                              \
+    do {                                                                                           \
+        std::cerr << "[LOG] " << msg << " " << arg << "\n";                                       \
     } while (0)
 #define ERROR(msg)                                                                                 \
     do {                                                                                           \
@@ -37,4 +41,3 @@
         std::cerr << "Error: " << out << "\n";                                                     \
         assert(condition);                                                                         \
     } while (0)
-    

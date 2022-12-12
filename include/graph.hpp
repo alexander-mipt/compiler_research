@@ -22,6 +22,13 @@ enum class ColorT {
     HIDDEN,
 };
 
+struct Cycle {
+    key_t head_node{KEY_UNDEF};
+    key_t back_edge{KEY_UNDEF};
+    key_t back_edge_start{KEY_UNDEF};
+    bool reducible{false};
+};
+
 using weight_t = int;
 
 template <typename N, typename E> class Graph;
@@ -43,12 +50,15 @@ template <typename N, typename E> class Node {
     typename std::map<key_t, Node<N, E> *>::iterator successors_end();
 
     void set_color(ColorT c);
+    void set_loop(key_t header_key);
     N &access_data() &;
     const key_t get_key() const;
     ColorT get_color() const;
+    key_t get_loop() const;
     size_t get_predecessor_count() const;
     size_t get_successor_count() const;
     key_t key_init();
+    key_t set_key(key_t key);
     // const weight_t get_weight() const;
   protected:
     // const Node<N, E> *get_node_ptr(key_t node_key);
@@ -61,17 +71,28 @@ template <typename N, typename E> class Node {
     std::map<key_t, Node<N, E> *> m_successors{};
     std::map<key_t, Node<N, E> *> m_predecessors{};
     ColorT m_color{ColorT::WHITE};
+    key_t m_loop{KEY_UNDEF};
 };
 
 template <typename N, typename E>
 Node<N, E>::Node(N &&data, const Graph<N, E> &g) : m_data(std::move(data)), m_graph(&g) {}
 
 template <typename N, typename E> void Node<N, E>::set_color(ColorT c) { m_color = c; }
+template <typename N, typename E> void Node<N, E>::set_loop(key_t head_key) { m_loop = head_key; }
+template <typename N, typename E> key_t Node<N, E>::set_key(key_t key) {
+    m_key = key;
+    return m_key;
+}
 
 template <typename N, typename E> ColorT Node<N, E>::get_color() const { return m_color; }
+template <typename N, typename E> key_t Node<N, E>::get_loop() const { return m_loop; }
 
-template <typename N, typename E> size_t Node<N, E>::get_successor_count() const { return m_successors.size(); }
-template <typename N, typename E> size_t Node<N, E>::get_predecessor_count() const { return m_predecessors.size(); }
+template <typename N, typename E> size_t Node<N, E>::get_successor_count() const {
+    return m_successors.size();
+}
+template <typename N, typename E> size_t Node<N, E>::get_predecessor_count() const {
+    return m_predecessors.size();
+}
 
 template <typename N, typename E>
 typename std::map<key_t, Node<N, E> *>::iterator Node<N, E>::predecessors_begin() {
@@ -186,7 +207,8 @@ template <typename N, typename E> class Edge {
 
 template <typename N, typename E>
 Edge<N, E>::Edge(E &&data, const Graph<N, E> &g, key_t start_node_key, key_t end_node_key)
-    : m_data(std::move(data)), m_start_node_key(start_node_key), m_end_node_key(end_node_key), m_graph(&g) {}
+    : m_data(std::move(data)), m_start_node_key(start_node_key), m_end_node_key(end_node_key),
+      m_graph(&g) {}
 
 template <typename N, typename E> key_t Edge<N, E>::key_init() {
     if (m_key != KEY_UNDEF) {
@@ -218,6 +240,7 @@ template <typename N, typename E> class Graph {
     virtual ~Graph();
 
     virtual key_t add_node(N &&node_data);
+    virtual key_t add_node(N &&node_data, key_t key);
     virtual key_t add_nodes(N &&node_data, size_t count);
     virtual key_t delete_node(key_t node_key);
     virtual key_t add_edge(E &&edge_data, key_t start_node_key, key_t end_node_key);
@@ -225,19 +248,22 @@ template <typename N, typename E> class Graph {
     virtual key_t cut_node(key_t node_key);
     virtual key_t cut_edge(key_t start_node_key, key_t end_node_key);
     virtual key_t paste_all();
-    
-    Node<N,E>* at(key_t node_key);
+
+    Node<N, E> *at(key_t node_key);
 
     std::vector<key_t> DFS(key_t root_key, key_t end_key = KEY_UNDEF);
     bool hasPath(key_t start, key_t end);
     std::vector<key_t> RPO(key_t root_key);
     std::vector<key_t> getDominatedNodes(key_t root_key, key_t target_node);
+    bool is_a_dominates_b(key_t root_key, key_t a, key_t b);
+    std::vector<Cycle> get_cycles(key_t root_key, key_t end_key);
 
     bool node_exists(key_t key) const;
     virtual std::string dump() const;
     key_t get_avail_nd_key() const;
     key_t get_avail_edg_key() const;
     size_t get_node_count() const;
+    key_t get_edge_id(key_t start_node_key, key_t end_node_key) const;
 
     friend key_t Node<N, E>::add_predecessor(key_t p_key);
     friend key_t Node<N, E>::add_successor(key_t s_key);
@@ -251,15 +277,16 @@ template <typename N, typename E> class Graph {
 
   private:
     std::vector<key_t> DFS_(Node<N, E> &nd, key_t end_key);
+    std::vector<Cycle> get_cycles_(Node<N, E> &nd, key_t root_key, key_t end_key);
     std::vector<ColorT> preserve_colors_() const;
-    void recover_colors_(const std::vector<ColorT>& vec);
+    void recover_colors_(const std::vector<ColorT> &vec);
 
   protected:
     std::map<key_t, Node<N, E> *> m_nodes{};
     std::map<key_t, Edge<N, E> *> m_edges{};
     key_t m_actual_node_key{1};
     key_t m_actual_edge_key{1};
-    std::map<key_t, Node<N,E> *> m_nodes_buf{};
+    std::map<key_t, Node<N, E> *> m_nodes_buf{};
     std::map<key_t, Edge<N, E> *> m_edges_buf{};
 };
 
@@ -274,6 +301,25 @@ template <typename N, typename E> key_t Graph<N, E>::get_avail_edg_key() const {
 template <typename N, typename E> key_t Graph<N, E>::add_node(N &&node_data) {
     Node<N, E> *nptr = new Node<N, E>{std::move(node_data), *this};
     key_t node_key = nptr->key_init();
+    auto node_insertion_result = m_nodes.insert(std::make_pair(node_key, nptr));
+    if (!node_insertion_result.second) {
+        ERROR("Cannot insert node w/ given key");
+        delete nptr;
+        return KEY_UNDEF;
+    }
+    m_actual_node_key++;
+    return node_key;
+}
+
+template <typename N, typename E> key_t Graph<N, E>::add_node(N &&node_data, key_t key) {
+    auto node_find_result = m_nodes.find(key);
+    if (node_find_result != m_nodes.end()) {
+        ERROR("Wrong node key");
+        return KEY_UNDEF;
+    }
+    m_actual_node_key = std::max(key, m_actual_node_key);
+    Node<N, E> *nptr = new Node<N, E>{std::move(node_data), *this};
+    key_t node_key = nptr->set_key(key);
     auto node_insertion_result = m_nodes.insert(std::make_pair(node_key, nptr));
     if (!node_insertion_result.second) {
         ERROR("Cannot insert node w/ given key");
@@ -309,7 +355,7 @@ template <typename N, typename E> key_t Graph<N, E>::delete_node(key_t node_key)
             edges_to_delete.push_back(edge_key);
         }
     }
-    for (auto key: edges_to_delete) {
+    for (auto key : edges_to_delete) {
         delete_edge(key);
     }
     // delete node X
@@ -339,10 +385,9 @@ template <typename N, typename E> key_t Graph<N, E>::cut_node(key_t node_key) {
     m_nodes_buf.insert(std::make_pair(node_key, m_nodes[node_key]));
     m_nodes.erase(node_key);
     return node_key;
-
 }
 
-template <typename N, typename E> key_t Graph<N,E>::cut_edge(key_t edge_key) {
+template <typename N, typename E> key_t Graph<N, E>::cut_edge(key_t edge_key) {
     auto result = m_edges.find(edge_key);
     if (result == m_edges.end()) {
         ERROR("No such edge");
@@ -351,7 +396,8 @@ template <typename N, typename E> key_t Graph<N,E>::cut_edge(key_t edge_key) {
 
     key_t start_node_key = result->second->get_start_node_key();
     key_t end_node_key = result->second->get_end_node_key();
-    if (m_nodes.find(start_node_key) == m_nodes.end() || m_nodes.find(end_node_key) == m_nodes.end()) {
+    if (m_nodes.find(start_node_key) == m_nodes.end() ||
+        m_nodes.find(end_node_key) == m_nodes.end()) {
         ERROR("No start/end node - cannot cut edge");
     }
 
@@ -386,6 +432,31 @@ key_t Graph<N, E>::cut_edge(key_t start_node_key, key_t end_node_key) {
         if (edge->get_end_node_key() == end_node_key &&
             edge->get_start_node_key() == start_node_key) {
             return cut_edge(edge_key);
+        }
+    }
+    ERROR("No edges selected for cut");
+    return KEY_UNDEF;
+}
+
+template <typename N, typename E>
+key_t Graph<N, E>::get_edge_id(key_t start_node_key, key_t end_node_key) const {
+    using edge_item_t = std::pair<key_t, Edge<N, E> *>;
+    auto output_node_it = m_nodes.find(start_node_key);
+    if (output_node_it == m_nodes.end()) {
+        ERROR("Wrong start node key");
+        return KEY_UNDEF;
+    }
+    auto input_node_it = m_nodes.find(end_node_key);
+    if (input_node_it == m_nodes.end()) {
+        ERROR("Wrong end node key");
+        return KEY_UNDEF;
+    }
+    for (auto &item : m_edges) {
+        key_t edge_key = item.first;
+        Edge<N, E> *edge = item.second;
+        if (edge->get_end_node_key() == end_node_key &&
+            edge->get_start_node_key() == start_node_key) {
+            return edge_key;
         }
     }
     ERROR("No edges selected for cut");
@@ -460,8 +531,7 @@ key_t Graph<N, E>::paste_edge(key_t start_node_key, key_t end_node_key) {
 }
 #endif
 
-template <typename N, typename E>
-key_t Graph<N, E>::paste_edge(key_t edge_key) {
+template <typename N, typename E> key_t Graph<N, E>::paste_edge(key_t edge_key) {
     auto edge_it = m_edges_buf.find(edge_key);
     if (edge_it == m_edges_buf.end()) {
         ERROR("No such edge in buf");
@@ -473,14 +543,15 @@ key_t Graph<N, E>::paste_edge(key_t edge_key) {
     }
     key_t start_node_key = edge_it->second->get_start_node_key();
     key_t end_node_key = edge_it->second->get_end_node_key();
-    if (m_nodes.find(start_node_key) == m_nodes.end() || m_nodes.find(end_node_key) == m_nodes.end()) {
+    if (m_nodes.find(start_node_key) == m_nodes.end() ||
+        m_nodes.find(end_node_key) == m_nodes.end()) {
         ERROR("No nodes for pasted edge");
         return KEY_UNDEF;
     }
     m_edges.insert(std::make_pair(edge_it->first, edge_it->second));
     m_edges_buf.erase(edge_key);
-    Node<N,E> *start_node = m_nodes.at(start_node_key);
-    Node<N,E> *end_node = m_nodes.at(end_node_key);
+    Node<N, E> *start_node = m_nodes.at(start_node_key);
+    Node<N, E> *end_node = m_nodes.at(end_node_key);
     key_t key1 = start_node->add_successor(end_node_key);
     key_t key2 = end_node->add_predecessor(start_node_key);
     if (key1 == KEY_UNDEF || key2 == KEY_UNDEF) {
@@ -489,8 +560,7 @@ key_t Graph<N, E>::paste_edge(key_t edge_key) {
     return edge_key;
 }
 
-template <typename N, typename E>
-key_t Graph<N, E>::paste_node(key_t node_key) {
+template <typename N, typename E> key_t Graph<N, E>::paste_node(key_t node_key) {
     auto node_find_result = m_nodes_buf.find(node_key);
     if (node_find_result == m_nodes_buf.end()) {
         ERROR("Wrong pasted node key");
@@ -508,16 +578,15 @@ key_t Graph<N, E>::paste_node(key_t node_key) {
     return node_key;
 }
 
-template <typename N, typename E>
-key_t Graph<N, E>::paste_all() {
-    while(m_nodes_buf.size()) {
+template <typename N, typename E> key_t Graph<N, E>::paste_all() {
+    while (m_nodes_buf.size()) {
         key_t key = m_nodes_buf.rbegin()->first;
         if (paste_node(key) == KEY_UNDEF) {
             ERROR("Error during pasting node");
             return KEY_UNDEF;
         }
     }
-    while(m_edges_buf.size()) {
+    while (m_edges_buf.size()) {
         key_t key = m_edges_buf.rbegin()->first;
         if (paste_edge(key) == KEY_UNDEF) {
             ERROR("Error during pasting edge");
@@ -569,7 +638,7 @@ template <typename N, typename E> key_t Graph<N, E>::delete_edge(key_t edge_key)
     return edge_key;
 }
 
-template <typename N, typename E> Node<N, E>* Graph<N, E>::at(key_t key) {
+template <typename N, typename E> Node<N, E> *Graph<N, E>::at(key_t key) {
     auto res = m_nodes.find(key);
     if (res == m_nodes.end()) {
         ERROR("No such node key");
@@ -617,13 +686,15 @@ template <typename N, typename E> std::string Graph<N, E>::dump() const {
     for (auto &item : m_edges) {
         key_t edge_key = item.first;
         Edge<N, E> *edge = item.second;
-        ss << "\t" << edge->get_start_node_key() << " -> " << edge->get_end_node_key() << "\n";
+        ss << "\t" << edge->get_start_node_key() << " -> " << edge->get_end_node_key() << "\t";
+        ss << "[label=" << edge_key << "]\n";
     }
     ss << "}\n";
     return ss.str();
 }
 
-template <typename N, typename E> std::vector<key_t> Graph<N, E>::DFS(key_t root_key, key_t end_key) {
+template <typename N, typename E>
+std::vector<key_t> Graph<N, E>::DFS(key_t root_key, key_t end_key) {
     auto res = m_nodes.find(root_key);
     if (res == m_nodes.end()) {
         ERROR("No such node key");
@@ -639,7 +710,8 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::DFS(key_t root
     return vec;
 }
 
-template <typename N, typename E> std::vector<key_t> Graph<N, E>::DFS_(Node<N, E> &nd, key_t end_key) {
+template <typename N, typename E>
+std::vector<key_t> Graph<N, E>::DFS_(Node<N, E> &nd, key_t end_key) {
     std::vector<key_t> vec{nd.get_key()};
     if (nd.get_key() == end_key) {
         nd.set_color(ColorT::BLACK);
@@ -661,7 +733,60 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::DFS_(Node<N, E
 }
 
 template <typename N, typename E>
-std::vector<ColorT> Graph<N, E>::preserve_colors_() const {
+std::vector<Cycle> Graph<N, E>::get_cycles(key_t root_key, key_t end_key) {
+    auto res = m_nodes.find(root_key);
+    if (res == m_nodes.end()) {
+        ERROR("No such node key");
+        return {};
+    }
+    std::vector<ColorT> colors = preserve_colors_();
+    auto *node = res->second;
+    std::vector<Cycle> vec{};
+    if (node->get_color() == ColorT::WHITE) {
+        vec = get_cycles_(*node, root_key, end_key);
+    }
+    recover_colors_(colors);
+    for (auto &cycle : vec) {
+        if (is_a_dominates_b(root_key, cycle.head_node, cycle.back_edge_start)) {
+            cycle.reducible = true;
+        }
+    }
+    // recover_colors_(colors);
+    return vec;
+}
+
+template <typename N, typename E>
+std::vector<Cycle> Graph<N, E>::get_cycles_(Node<N, E> &nd, key_t root_key, key_t end_key) {
+    std::vector<Cycle> vec{};
+    // if (nd.get_key() == end_key) {
+    //     nd.set_color(ColorT::BLACK);
+    //     return vec;
+    // }
+    nd.set_color(ColorT::GRAY);
+    for (auto it = nd.successors_begin(); it != nd.successors_end(); it++) {
+        if (it->second->get_color() == ColorT::GRAY) {
+            key_t backedge_end = it->second->get_key();
+            key_t backedge_start = nd.get_key();
+            key_t edge_key = get_edge_id(backedge_start, backedge_end);
+            key_t head_key = backedge_end;
+            // bool reducible = !is_a_dominates_b(root_key, backedge_end, backedge_start);
+            Cycle c = {head_key, edge_key, backedge_start, false};
+            vec.push_back(c);
+        }
+        if (it->second->get_color() == ColorT::WHITE) {
+            std::vector<Cycle> tmp = get_cycles_(*(it->second), root_key, end_key);
+            vec.insert(vec.end(), tmp.begin(), tmp.end());
+            // if (vec.back() == end_key) {
+            //     nd.set_color(ColorT::BLACK);
+            //     return vec;
+            // }
+        }
+    }
+    nd.set_color(ColorT::BLACK);
+    return vec;
+}
+
+template <typename N, typename E> std::vector<ColorT> Graph<N, E>::preserve_colors_() const {
     std::vector<ColorT> vec{};
     for (auto &it : m_nodes) {
         vec.push_back(it.second->get_color());
@@ -670,7 +795,7 @@ std::vector<ColorT> Graph<N, E>::preserve_colors_() const {
 }
 
 template <typename N, typename E>
-void Graph<N, E>::recover_colors_(const std::vector<ColorT>& vec) {
+void Graph<N, E>::recover_colors_(const std::vector<ColorT> &vec) {
     if (vec.size() != m_nodes.size()) {
         ERROR("Wrong countity of colors");
         return;
@@ -688,19 +813,20 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::RPO(key_t root
         ERROR("No such node key");
         return {};
     }
-    std::vector<key_t> vec{root_key};
+    std::vector<key_t> vec{};
     auto *node = res->second;
     node->set_color(ColorT::BLACK);
     std::queue<key_t> q{};
     q.push(node->get_key());
     while (!q.empty()) {
-        key_t key = q.back();
+        key_t key = q.front();
+        vec.push_back(key);
         q.pop();
         Node<N, E> *node = m_nodes[key];
         for (auto it = node->successors_begin(); it != node->successors_end(); it++) {
             Node<N, E> *nd = it->second;
             if (nd->get_color() != ColorT::BLACK) {
-                vec.push_back(nd->get_key());
+                // vec.push_back(nd->get_key());
                 nd->set_color(ColorT::BLACK);
                 q.push(nd->get_key());
             }
@@ -713,7 +839,8 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::RPO(key_t root
 }
 
 // not tested yet
-template <typename N, typename E> std::vector<key_t> Graph<N, E>::getDominatedNodes(key_t root_key, key_t target_key) {
+template <typename N, typename E>
+std::vector<key_t> Graph<N, E>::getDominatedNodes(key_t root_key, key_t target_key) {
     auto res = m_nodes.find(root_key);
     if (res == m_nodes.end()) {
         ERROR("No such root key");
@@ -736,7 +863,7 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::getDominatedNo
     //     std::cerr << x << " ";
     // }
     // std::cerr << "\n";
-    for (auto node_key: reduced) {
+    for (auto node_key : reduced) {
         for (auto it = origin.begin(); it != origin.end(); ++it) {
             if (*it == node_key) {
                 origin.erase(it);
@@ -749,7 +876,17 @@ template <typename N, typename E> std::vector<key_t> Graph<N, E>::getDominatedNo
 }
 
 template <typename N, typename E>
-bool Graph<N,E>::hasPath(key_t start, key_t end) {
+bool Graph<N, E>::is_a_dominates_b(key_t root_key, key_t a, key_t b) {
+    auto employees = getDominatedNodes(root_key, a);
+    for (auto &key : employees) {
+        if (b == key) {
+            return true;
+        }
+    }
+    return false;
+}
+
+template <typename N, typename E> bool Graph<N, E>::hasPath(key_t start, key_t end) {
     auto path = DFS(start, end);
     if (path.size() == 0 || path.back() != end) {
         return false;
