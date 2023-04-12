@@ -11,8 +11,8 @@
 namespace IR {
 
 struct InstrArgs {
-    OpcdT opcode{OpcdT::UNDEF};
-    InstrT type{InstrT::UNDEF};
+    InstrT opcode{InstrT::UNDEF};
+    GroupT type{GroupT::UNDEF};
 };
 
 class BasicBlock final {
@@ -22,8 +22,9 @@ class BasicBlock final {
     using PhyIt = typename std::list<Phy *>::iterator;
     using InstrContainer = std::list<Instr *>;
     using PhyContainer = std::list<Phy *>;
-    using InstrInitList = std::initializer_list<InstrArgs>;
-    using PhyInitList = std::initializer_list<const Phy*>;
+    using ConstInstrInitList = std::initializer_list<const Instr *>;
+    using InstrInitList = std::initializer_list<Instr*>;
+    using PhyInitList = std::initializer_list<Phy*>;
 
   public:
     BasicBlock();
@@ -38,7 +39,8 @@ class BasicBlock final {
 
     // creates copy w/ same DF dependencies, but CF, id and bb id are edited 
     // do not copy DF
-    void push_instrs(InstrInitList list);
+    void push_instrs(ConstInstrInitList list);
+    void push_instrs(InstrInitList);
     void push_phys(PhyInitList list);
     InstrIt erase_instr(InstrIt it);
     PhyIt erase_phy(PhyIt it);
@@ -50,7 +52,7 @@ class BasicBlock final {
     PhyIt phy_end();
     PhyIt phy_last();
 
-    void throwIfNonConsistence_() const;
+    void throwIfNotConsistent_() const;
     std::vector<std::string> dump() const;
     id_t get_id() const;
     InstrCIt instr_cbegin() const;

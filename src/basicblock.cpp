@@ -6,26 +6,22 @@ namespace IR {
 BasicBlock::BasicBlock() {}
 BasicBlock::BasicBlock(id_t id) : m_bb_id(id) {}
 BasicBlock::BasicBlock(id_t id, InstrInitList instrs, PhyInitList phys) : m_bb_id(id) {
-    for (const auto *ptr : phys) {
-        if (ptr == nullptr) {
-            throw std::logic_error("nullptr args");
-        }
-    }
     Instr *prev{nullptr};
-    for (auto &args : instrs) {
-        Instr *instr = new Instr(*this, ++m_cur_instr_id, args.opcode, args.type);
+    for (auto *instr : instrs) {
+        ASSERT_DEV(instr, "nullptr during bb fill");
+        instr->set_bb(this);
+        instr->throwIfNotConsistent_();
         instr->set_prev(prev);
         m_instrs.push_back(instr);
         prev = instr;
     }
-}
 
-BasicBlock::~BasicBlock() {
-    for (auto ptr : m_instrs) {
-        delete ptr;
-    }
-    for (auto ptr : m_phys) {
-        delete ptr;
+    Phy *prev{nullptr};
+    for (auto *phy : phys) {
+        ASSERT_DEV(phy, "nullptr during bb fill");
+        phy->set_bb(this);
+        phy->throwIfNotConsistent_();
+        m_phys.push_back(phy);
     }
 }
 
@@ -78,8 +74,9 @@ BasicBlock::PhyIt BasicBlock::phy_last() {
 
 void BasicBlock::push_instrs(InstrInitList list) {
     Instr *prev = m_instrs.size()? *instr_clast() : nullptr;
-    for (auto &args : list) {
-        Instr *instr = new Instr(*this, ++m_cur_instr_id, args.opcode, args.type);
+    for (auto *instr : list) {
+        ASSERT_DEV(instr, "nullptr during bb fill");
+        instr->throwIfNotConsistent_();
         instr->set_prev(prev);
         m_instrs.push_back(instr);
         prev = instr;
@@ -87,33 +84,40 @@ void BasicBlock::push_instrs(InstrInitList list) {
 }
 
 void BasicBlock::push_phys(BasicBlock::PhyInitList list) {
-    for (auto ptr : list) {
-        if (ptr == nullptr) {
-            throw std::logic_error("nullptr arg");
-        }
-    }
     Phy *prev = m_phys.size()? *phy_clast() : nullptr;
-    for (const auto *ptr : list) {
-        Phy *phy = new Phy(*ptr);
-        phy->set_bb(this);
-        phy->set_id(++m_cur_instr_id);
+    for (auto *phy : list) {
+        ASSERT_DEV(phy, "nullptr during bb fill");
+        phy->throwIfNotConsistent_();
         m_phys.push_back(phy);
     }
 }
 
-void BasicBlock::throwIfNonConsistence_() const {}
+void BasicBlock::throwIfNotConsistent_() const {
+    const Instr *current_instr = *m_instrs.begin();
+    const Instr* prev_instr{nullptr};
+    for (const auto *i: m_instrs) {
+        ASSERT_DEV(i, "nullptr instr in bb");
+        i->throwIfNotConsistent_();
+        if (!current_instr || !i || current_instr != i || prev_instr != i->get_prev()) {
+            throw std::logic_error("Wrong bb instr sequence");
+        }
+        prev_instr = i;
+        current_instr = static_cast<const Instr*>(i->get_next());
+        ASSERT_DEV(current_instr->get_type() != GroupT::PHY, "phy among instr list");
+    }
+}
 
 std::vector<std::string> BasicBlock::dump() const {
     std::vector<std::string> strs{};
 
-    strs.push_back("--- Instrs ---");
-    for (const auto *instr : m_instrs) {
-        strs.push_back(instr->dump());
-    }
-
     strs.push_back("--- Phys ---");
     for (const auto *phy : m_phys) {
         strs.push_back(phy->dump());
+    }
+
+    strs.push_back("--- Instrs ---");
+    for (const auto *instr : m_instrs) {
+        strs.push_back(instr->dump());
     }
     return strs;
 }
@@ -137,13 +141,5 @@ BasicBlock::PhyIt BasicBlock::erase_phy(PhyIt it) {
     delete *it;
     return nextIt;
 }
-
-#if 0
-BasicBlock::BasicBlock(const BasicBlock &&bb) : m_bb_id(bb.m_bb_id) {
-    m_instr_ptrs = std::move(bb.m_instr_ptrs);
-    m_phi_ptrs = std::move(bb.m_phi_ptrs);
-}
-
-#endif
 
 } // namespace IR

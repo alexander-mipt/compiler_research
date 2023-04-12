@@ -1,11 +1,11 @@
 #pragma once
 #include "types.hpp"
 #include <cstdint>
+#include <exception>
 #include <list>
 #include <optional>
 #include <string>
 #include <unistd.h>
-
 namespace IR {
 
 class BasicBlock;
@@ -13,8 +13,12 @@ class InstrBase;
 
 using initList = std::initializer_list<const InstrBase *>;
 
-enum class OpcdT {
+using ValueType = int64_t;
+using RegType = uint32_t;
+
+enum class InstrT {
     UNDEF,
+    PHY,
     CAST,
     ADDI,
     ADD,
@@ -40,18 +44,47 @@ enum class OpcdT {
     RET,
 };
 
-enum class InstrT {
+enum class GroupT {
     UNDEF,
-    U8,
-    U16,
-    U32,
     U64,
-    I8,
-    I16,
-    I32,
     I64,
+    DOUBLE,
     PHY,
     // result type
+};
+
+constexpr int64_t NO_VALUEHOLDER{-1};
+
+class ValueHolder {
+  public:
+    // for constants
+    ValueHolder() = default;
+    ValueHolder(ValueType value) : m_val(value) {}
+    // for reg values
+    ValueHolder(ValueType value, RegType regNum) : m_val(value), m_regNum(regNum) {}
+    bool isConst() const { return (m_regNum == NO_VALUEHOLDER); }
+    uint32_t getRegNum() {
+        if (isConst()) {
+            throw std::logic_error("Constant value does not allow placeholder");
+        }
+        return m_regNum;
+    }
+    int64_t get() const {
+      return m_val;
+    }
+    void set(int64_t val) {
+      m_val = val;
+    }
+    void setRegNum(RegType regNum) {
+      m_regNum = regNum;
+    }
+    void makeAsConst() {
+      m_regNum = NO_VALUEHOLDER;
+    }
+
+  private:
+    int64_t m_val{0};
+    int64_t m_regNum{NO_VALUEHOLDER};
 };
 
 enum class CondCodeT { EQ, NE, LT, GE };
@@ -71,6 +104,7 @@ class InstrBase {
     InstrBase(){};
     InstrBase(const BasicBlock &bb);
     InstrBase(const BasicBlock &bb, id_t id);
+    InstrBase(id_t id);
     InstrBase(const BasicBlock &bb, id_t id, initList list);
     // InstrBase(const InstrBase &other);
     // InstrBase(const InstrBase &&other);
@@ -88,15 +122,15 @@ class InstrBase {
     bool erase_input(id_t bb_id, id_t id);
 
     virtual std::string dump() const;
-    void throwIfNonConsistence_() const;
-    virtual InstrT get_type() const;
+    void throwIfNotConsistent_() const;
+    virtual GroupT get_type() const;
     const InstrBase *get_prev() const;
     const InstrBase *get_next() const;
     const BasicBlock &get_bb() const;
     CInputListIt cbegin() const;
     CInputListIt cend() const;
     CInputListIt clast() const;
-    
+
     id_t get_id() const;
 
   protected:
@@ -110,17 +144,20 @@ class InstrBase {
 class Instr : public InstrBase {
   public:
     Instr();
-    Instr(const BasicBlock &bb, id_t id, OpcdT opcode, InstrT type);
+    Instr(id_t id);
+    Instr(const BasicBlock &bb, id_t id, InstrT opcode, GroupT type, int64_t value, int64_t valueHolder);
     std::string dump() const override;
 
   public:
-    const OpcdT m_opcd{OpcdT::UNDEF};
-    const InstrT m_type{InstrT::UNDEF};
+    const InstrT m_opcd{InstrT::UNDEF};
+    const GroupT m_type{GroupT::UNDEF};
+    ValueHolder m_value{};
 };
 
 class Phy final : public InstrBase {
   public:
     Phy();
+    Phy(id_t id);
     Phy(const BasicBlock &bb, id_t id, initList list);
     std::string dump() const override;
 };
@@ -128,37 +165,37 @@ class Phy final : public InstrBase {
 // Specific instrs classes
 // class UnaryRegInstr : public InstrBase, public InputList {
 //   public:
-//     UnaryRegInstr(OpcdT opcd, InstrT type) : InstrBase(opcd, type) {}
+//     UnaryRegInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
 // };
 
 // class BinaryRegInstr : public InstrBase, public InputList {
 //   public:
-//     BinaryRegInstr(OpcdT opcd, InstrT type) : InstrBase(opcd, type) {}
+//     BinaryRegInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
 // };
 
 // class BinaryImmInstr : public InstrBase, public InputList, public ImmedOpnd<uint64_t> {
 //   public:
-//     BinaryImmInstr(OpcdT opcd, InstrT type) : InstrBase(opcd, type) {}
+//     BinaryImmInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
 // };
 
 // class CompareInstr : public InstrBase, public InputList, public CondOpnd {
 //   public:
-//     CompareInstr(OpcdT opcd, InstrT type) : InstrBase(opcd, type) {}
+//     CompareInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
 // };
 
 // class CastInstr : public InstrBase, public InputList, public TypeOpnd {
 //   public:
-//     CastInstr(OpcdT opcd, InstrT type) : InstrBase(opcd, type) {}
+//     CastInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
 // };
 
 // class JumpInstr : public InstrBase, public ImmOpnd<uint64_t> {
 //   public:
-//     JumpInstr(OpcdT opcd, InstrT type) : InstrBase(opcd, type) {}
+//     JumpInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
 // };
 
 // class RetInstr : public InstrBase {
 //   public:
-//     RetInstr(OpcdT opcd, InstrT type) : InstrBase(opcd, type) {}
+//     RetInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
 // };
 
 } // namespace IR

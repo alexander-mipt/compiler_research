@@ -7,6 +7,7 @@ namespace IR {
 /* Instr Base class */
 InstrBase::~InstrBase() {}
 InstrBase::InstrBase(const BasicBlock &bb) : m_bb(&bb) {}
+InstrBase::InstrBase(id_t id) : m_id(id) {}
 InstrBase::InstrBase(const BasicBlock &bb, id_t id) : m_bb(&bb), m_id(id) {}
 InstrBase::InstrBase(const BasicBlock &bb, id_t id, initList list) : InstrBase(bb, id) {
     for (const auto* ptr: list) {
@@ -23,7 +24,7 @@ void InstrBase::set_next(const InstrBase *instr) { m_next = instr; }
 void InstrBase::set_bb(const BasicBlock *bb) { m_bb = bb; }
 void InstrBase::set_id(id_t id) { m_id = id; }
 std::string InstrBase::dump() const { return "???"; };
-InstrT InstrBase::get_type() const { return InstrT::UNDEF; };
+GroupT InstrBase::get_type() const { return GroupT::UNDEF; };
 const InstrBase *InstrBase::get_prev() const { return m_prev; }
 const InstrBase *InstrBase::get_next() const { return m_next; }
 InstrBase::CInputListIt InstrBase::cbegin() const { return m_users.cbegin(); }
@@ -91,22 +92,36 @@ void InstrBase::push_inputs(initList list) {
     }
 }
 
-void InstrBase::throwIfNonConsistence_() const {
+void InstrBase::throwIfNotConsistent_() const {
+    if (m_id == ID_UNDEF) {
+        throw std::logic_error("instr w/ wring id");
+    }
+    if (!m_bb) {
+        throw std::logic_error("Instr without bb");
+    }
+    
     bool fault{0};
-    fault |= (m_bb == nullptr);
-    fault |= (m_id == ID_UNDEF);
     for (auto ptr : m_users) {
         fault |= (ptr == nullptr);
     }
     if (fault) {
-        throw std::logic_error("Inconsistent instr base");
+        throw std::logic_error("Nullptr in instr users");
     }
 }
 
 /* Instr class */
 Instr::Instr() {}
-Instr::Instr(const BasicBlock &bb, id_t id, OpcdT opcode, InstrT type)
-    : InstrBase(bb, id), m_opcd(opcode), m_type(type) {}
+Instr::Instr(id_t id) : InstrBase(id) {}
+Instr::Instr(const BasicBlock &bb, id_t id, InstrT opcode, GroupT type, int64_t value, int64_t valueHolder)
+    : InstrBase(bb, id), m_opcd(opcode), m_type(type) {
+        if (valueHolder == NO_VALUEHOLDER) {
+            m_value = ValueHolder(value);
+        } else if (valueHolder >= 0) {
+            m_value = ValueHolder(value, valueHolder);
+        } else {
+            throw std::logic_error("Invalid value holder");
+        }
+    }
 
 std::string Instr::dump() const {
     std::stringstream ss{};
@@ -135,6 +150,7 @@ std::string Instr::dump() const {
 
 /* Phy class */
 Phy::Phy() : InstrBase() {}
+Phy::Phy(id_t id) : InstrBase(id) {}
 Phy::Phy(const BasicBlock &bb, id_t id, initList list) : InstrBase(bb, id, list) {}
 
 
@@ -149,35 +165,5 @@ std::string Phy::dump() const {
     ss << ")";
     return ss.str();
 }
-
-#if 0
-InstrBase::InstrBase(const InstrBase &other)
-    : m_opcd(other.m_opcd), m_type(other.m_type), m_id(g_id++), m_bb(other.m_bb),
-      m_prev(other.m_prev), m_next(other.m_next) {
-    for (auto it = m_users.begin(); it != m_users.end(); it++) {
-        InstrInput *ptr{nullptr};
-        if ((*it)->is_phi()) {
-            ptr = new PhiInstr(*static_cast<PhiInstr *>(*it));
-        } else {
-            ptr = new InstrInput(**it);
-        }
-        m_users.push_back(ptr);
-    }
-}
-InstrBase::InstrBase(const InstrBase &&other)
-    : m_opcd(other.m_opcd), m_type(other.m_type), m_id(g_id), m_bb(other.m_bb),
-      m_prev(other.m_prev), m_next(other.m_next) {
-    for (auto it = m_users.begin(); it != m_users.end(); it++) {
-        InstrInput *ptr{nullptr};
-        if ((*it)->is_phi()) {
-            ptr = new PhiInstr(std::move(*static_cast<PhiInstr *>(*it)));
-        } else {
-            ptr = new InstrInput(std::move(**it));
-        }
-        m_users.push_back(ptr);
-        *it = nullptr;
-    }
-}
-#endif
 
 } // namespace IR
