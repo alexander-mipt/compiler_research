@@ -32,11 +32,13 @@
 #define $(x) << x
 #define $n(x) << x << "\n"
 #define $int(x) << std::dec << #x << ": " << static_cast<long>(x)
-#define $hex(x) << std::hex << #x << ": " << static_cast<long>(x)
-#define $ptr(x) << std::hex << #x << ": " << x
+#define $hex(x) << std::hex << #x << ": " << static_cast<long>(x) << std::dec
+#define $ptr(x) << std::hex << #x << ": " << x << std::dec
 #define $intn(x) $int(x) << "\n"
 #define $hexn(x) $hex(x) << "\n"
 #define $ptrn(x) $ptr(x) << "\n"
+#define $__ << "    "
+#define $newline << "\n"
 
 #define ASSERT_DEV(condition, out)                                                                 \
     do {                                                                                           \

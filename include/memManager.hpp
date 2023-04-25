@@ -1,31 +1,50 @@
-#include "instruction.hpp"
+#pragma once
 #include "basicblock.hpp"
+#include "instruction.hpp"
 #include <exception>
-#include <vector>
 #include <set>
+#include <vector>
 
 namespace IR {
 
-template <size_t capacity = 20> class InstrManager {
+class InstrManager {
   public:
     InstrManager(const InstrManager &) = delete;
     InstrManager(InstrManager &&) = delete;
-    InstrManager() { m_mem.reserve(capacity); }
+    InstrManager() = default;
     ~InstrManager() {
         for (auto i : m_mem) {
             delete i;
         }
     }
 
-    Instr *create(InstrT type, GroupT group, id_t id = -1) {
-        if (group == GroupT::PHY || type == TypeT::PHY) {
+    Instr *createADD(ValueHolder value) {
+        return create(OpcodeType::ADD, GroupType::GENERAL64, value);
+    }
+    Instr *createXOR(ValueHolder value) {
+        return create(OpcodeType::XOR, GroupType::GENERAL64, value);
+    }
+    Instr *createSHL(ValueHolder value) {
+        return create(OpcodeType::SHL, GroupType::GENERAL64, value);
+    }
+    Instr *createCONST(ValueHolder value) {
+        if (value.m_regNum == NO_VALUEHOLDER) {
+            return create(OpcodeType::ICONST, GroupType::CONST, value);
+        }
+        return create(OpcodeType::MOVI, GroupType::CONST, value);
+    }
+
+
+    Instr *create(OpcodeType type, GroupType group,
+                  ValueHolder value, id_t id = -1) {
+        if (group == GroupType::PHY || type == OpcodeType::PHY) {
             throw std::logic_error("Wrong instr type");
         }
 
-        id_t id0 = id == -1? m_id : id;
-        
-        InstrBase *ptr = new Instr(type, group, id0);
-        
+        id_t id0 = (id == -1) ? m_id : id;
+
+        Instr *ptr = new Instr(id0, type, group, value);
+
         m_id = std::max(m_id, id0) + 1;
         m_mem.push_back(ptr);
 
@@ -33,10 +52,10 @@ template <size_t capacity = 20> class InstrManager {
     }
 
     Phy *create(id_t id = -1) {
-        id_t id0 = id == -1? m_id : id;
-        
-        InstrBase *ptr = new Phy(id0);
-        
+        id_t id0 = id == -1 ? m_id : id;
+
+        Phy *ptr = new Phy(id0);
+
         m_id = std::max(m_id, id0) + 1;
         m_mem.push_back(ptr);
 
@@ -45,12 +64,11 @@ template <size_t capacity = 20> class InstrManager {
 
     void throwIfNotConsistent_() const {
         std::set<id_t> ids{};
-        for (const auto *i: m_mem) {
+        for (const auto *i : m_mem) {
             if (!i) {
                 throw std::logic_error("instr w/ nullptr");
             }
             i->throwIfNotConsistent_();
-
         }
         if (ids.size() != m_mem.size()) {
             throw std::logic_error("instr ids collision");
@@ -59,11 +77,12 @@ template <size_t capacity = 20> class InstrManager {
 
   private:
     std::vector<InstrBase *> m_mem{};
-    id_t m_id{ID_UNDEF};
+    id_t m_id{1};
 };
 
 class BasicBlockManager {
-    BasicBlockManager();
+    public:
+    BasicBlockManager() = default;
     ~BasicBlockManager() {
         for (auto i : m_mem) {
             delete i;
@@ -71,10 +90,10 @@ class BasicBlockManager {
     }
 
     BasicBlock *create(id_t id = -1) {
-        id_t id0 = id == -1? m_id : id;
-        
+        id_t id0 = id == -1 ? m_id : id;
+
         BasicBlock *ptr = new BasicBlock(id0);
-        
+
         m_id = std::max(m_id, id0) + 1;
         m_mem.push_back(ptr);
 
@@ -83,12 +102,11 @@ class BasicBlockManager {
 
     void throwIfNotConsistent_() const {
         std::set<id_t> ids{};
-        for (const auto *i: m_mem) {
+        for (const auto *i : m_mem) {
             if (!i) {
                 throw std::logic_error("basic block w/ nullptr");
             }
             i->throwIfNotConsistent_();
-
         }
         if (ids.size() != m_mem.size()) {
             throw std::logic_error("basic block ids collision");
@@ -97,8 +115,7 @@ class BasicBlockManager {
 
   private:
     std::vector<BasicBlock *> m_mem{};
-    id_t m_id{ID_UNDEF};
+    id_t m_id{1};
 };
-
 
 } // namespace IR

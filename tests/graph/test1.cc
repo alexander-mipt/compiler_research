@@ -5,9 +5,10 @@
 
 TEST_CASE("Test API 1", "[graph1]") {
     G::Graph<int, int> g{};
+    int value{10};
 
     for (key_t i = 1; i <= 5; ++i) {
-        REQUIRE(g.add_node(10) != G::KEY_UNDEF);
+        REQUIRE(g.add_node(value) != G::KEY_UNDEF);
     }
     REQUIRE(g.add_edge(10, 1, 3) != G::KEY_UNDEF); // 1
     REQUIRE(g.add_edge(10, 3, 2) != G::KEY_UNDEF); // 2
@@ -28,9 +29,10 @@ TEST_CASE("Test API 2", "[graph2]") {
 
     G::Graph<int, int> d{};
     G::key_t edge_key{1};
+    int value{10};
 
     for (key_t i = 1; i <= 5; ++i) {
-        REQUIRE(d.add_node(10) != G::KEY_UNDEF);
+        REQUIRE(d.add_node(value) != G::KEY_UNDEF);
     }
     REQUIRE(d.add_edge(10, 1, 3) != G::KEY_UNDEF); // 1
     REQUIRE(d.add_edge(10, 3, 2) != G::KEY_UNDEF); // 2
@@ -51,9 +53,10 @@ TEST_CASE("Test API 3", "[graph3]") {
 
     G::Graph<int, int> d{};
     G::key_t edge_key{1};
+    int value{10};
 
     for (key_t i = 1; i <= 5; ++i) {
-        REQUIRE(d.add_node(10) != G::KEY_UNDEF);
+        REQUIRE(d.add_node(value) != G::KEY_UNDEF);
     }
     REQUIRE(d.add_edge(10, 1, 3) != G::KEY_UNDEF);
     REQUIRE(d.add_edge(10, 1, 3) == G::KEY_DUBLICATE);
@@ -118,9 +121,10 @@ TEST_CASE("Test API 4", "[graph4]") {
 TEST_CASE("Test DFS", "[DFS1]") {
 
     G::Graph<int, int> g{};
+    int value{10};
 
     for (key_t i = 1; i <= 7; ++i) {
-        REQUIRE(g.add_node(10) != G::KEY_UNDEF);
+        REQUIRE(g.add_node(value) != G::KEY_UNDEF);
     }
     REQUIRE(g.add_edge(10, 1, 2) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(10, 2, 3) != G::KEY_UNDEF);
@@ -146,9 +150,10 @@ TEST_CASE("Test DFS", "[DFS1]") {
 
 TEST_CASE("Test dom search", "[DOM1]") {
     G::Graph<int, int> g{};
+    int value{10};
 
     for (key_t i = 1; i <= 7; ++i) {
-        REQUIRE(g.add_node(10) != G::KEY_UNDEF);
+        REQUIRE(g.add_node(value) != G::KEY_UNDEF);
     }
     REQUIRE(g.add_edge(10, 1, 2) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(10, 2, 3) != G::KEY_UNDEF);
@@ -189,7 +194,8 @@ TEST_CASE("Test dom search", "[DOM1]") {
 TEST_CASE("Test dom tree", "[DOM_TREE_1]") {
     // create SSA graph
     G::Graph<int, int> g{};
-    REQUIRE(g.add_nodes(0, 7) != G::KEY_UNDEF);
+    int value{0};
+    REQUIRE(g.add_nodes(value, 7) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 1, 2) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 2, 3) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 3, 4) != G::KEY_UNDEF);
@@ -204,7 +210,7 @@ TEST_CASE("Test dom tree", "[DOM_TREE_1]") {
     REQUIRE(g.hasPath(5, 4));
 
     G::Graph<int, int> domTree{};
-    REQUIRE(domTree.add_nodes(0, g.get_node_count()) != G::KEY_UNDEF);
+    REQUIRE(domTree.add_nodes(value, g.get_node_count()) != G::KEY_UNDEF);
     auto sortedNodes = g.DFS(1);
     for (auto it = sortedNodes.rbegin(); it != sortedNodes.rend(); ++it) {
         auto &key = *it;
@@ -290,7 +296,8 @@ TEST_CASE("Test dom tree", "[DOM_TREE_1]") {
 TEST_CASE("Test dom tree 2", "[DOM_TREE_2]") {
     // create SSA graph
     G::Graph<int, int> g{};
-    REQUIRE(g.add_nodes(0, 11) != G::KEY_UNDEF);
+    int value{0};
+    REQUIRE(g.add_nodes(value, 11) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 1, 2) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 2, 3) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 3, 4) != G::KEY_UNDEF);
@@ -305,7 +312,7 @@ TEST_CASE("Test dom tree 2", "[DOM_TREE_2]") {
     REQUIRE(g.add_edge(0, 10, 3) != G::KEY_UNDEF);
 
     G::Graph<int, int> domTree{};
-    REQUIRE(domTree.add_nodes(0, g.get_node_count()) != G::KEY_UNDEF);
+    REQUIRE(domTree.add_nodes(value, g.get_node_count()) != G::KEY_UNDEF);
     auto sortedNodes = g.DFS(1);
     std::cout << "DFS:\t";
     for (auto elem : sortedNodes) {
@@ -376,7 +383,8 @@ TEST_CASE("Test dom tree 2", "[DOM_TREE_2]") {
 TEST_CASE("Test dom tree 3", "[DOM_TREE_3]") {
     // create SSA graph
     G::Graph<int, int> g{};
-    REQUIRE(g.add_nodes(0, 9) != G::KEY_UNDEF);
+    int value{0};
+    REQUIRE(g.add_nodes(value, 9) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 1, 2) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 2, 3) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 3, 4) != G::KEY_UNDEF);
@@ -392,7 +400,7 @@ TEST_CASE("Test dom tree 3", "[DOM_TREE_3]") {
     REQUIRE(g.add_edge(0, 5, 4) != G::KEY_UNDEF);
 
     G::Graph<int, int> domTree{};
-    REQUIRE(domTree.add_nodes(0, g.get_node_count()) != G::KEY_UNDEF);
+    REQUIRE(domTree.add_nodes(value, g.get_node_count()) != G::KEY_UNDEF);
     auto sortedNodes = g.DFS(1);
     std::cout << "DFS:\t";
     for (auto elem : sortedNodes) {
@@ -424,9 +432,10 @@ TEST_CASE("Test dom tree 3", "[DOM_TREE_3]") {
 TEST_CASE("Test graph buffer", "[Gbuf1]") {
 
     G::Graph<int, int> g{};
+    int value{10};
 
     for (key_t i = 1; i <= 7; ++i) {
-        REQUIRE(g.add_node(10) != G::KEY_UNDEF);
+        REQUIRE(g.add_node(value) != G::KEY_UNDEF);
     }
     REQUIRE(g.add_edge(10, 1, 2) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(10, 2, 3) != G::KEY_UNDEF);
@@ -440,9 +449,9 @@ TEST_CASE("Test graph buffer", "[Gbuf1]") {
     REQUIRE(g.add_edge(10, 4, 4) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(10, 4, 4) == G::KEY_DUBLICATE);
     REQUIRE(g.cut_edge(4, 4) != G::KEY_UNDEF);
-    REQUIRE(g.add_node(10) != G::KEY_UNDEF);
+    REQUIRE(g.add_node(value) != G::KEY_UNDEF);
     REQUIRE(g.cut_node(8) != G::KEY_UNDEF);
-    REQUIRE(g.add_node(10) != G::KEY_UNDEF);
+    REQUIRE(g.add_node(value) != G::KEY_UNDEF);
     REQUIRE(g.cut_node(9) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(10, 4, 6) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(10, 6, 3) != G::KEY_UNDEF);
@@ -498,7 +507,8 @@ TEST_CASE("Test loop", "[LOOPS_1]") {
     // create SSA graph
     OPT(LOG("LOGGING IS ENABLED"));
     G::Graph<int, int> g{};
-    REQUIRE(g.add_nodes(0, 11) != G::KEY_UNDEF);
+    int value{10};
+    REQUIRE(g.add_nodes(value, 11) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 1, 2) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 2, 3) != G::KEY_UNDEF);
     REQUIRE(g.add_edge(0, 2, 4) != G::KEY_UNDEF);
@@ -546,13 +556,13 @@ TEST_CASE("Test loop", "[LOOPS_1]") {
     // std::cout << "\n";
 
     // for (auto it = vector2.rbegin(), rend = vector2.rend(); it != rend; ++it) {
-    //     if (!loops.node_exists(*it) /*|| !loops.at(*it)->access_data().reducible*/) {
+    //     if (!loops.node_exists(*it) /*|| !loops.at(*it)->data().reducible*/) {
     //         LOGarg("Continue:", loops.node_exists(*it));
     //         continue;
     //     }
     //     auto current_loop = *it;
     //     LOGarg("Work with loop", current_loop);
-    //     for (auto key : g.DFS(loops.at(current_loop)->access_data().back_edge_start)) {
+    //     for (auto key : g.DFS(loops.at(current_loop)->data().back_edge_start)) {
     //         LOGarg("\tfound block:", key);
     //         if (g.at(key)->get_loop() == G::KEY_UNDEF) {
     //             g.at(key)->set_loop(current_loop);
@@ -571,7 +581,7 @@ TEST_CASE("Test loop", "[LOOPS_1]") {
     std::cout << "Blocks:\n";
     for (auto it = loops.nodes_begin(); it != loops.nodes_end(); ++it) {
         std::cout << "loop: " << it->first << " ";
-        for (auto &block: it->second->access_data().blocks) {
+        for (auto &block: it->second->data().blocks) {
             std::cout << block << "\t";
         }
         std::cout << std::endl;

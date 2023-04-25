@@ -11,80 +11,65 @@ namespace IR {
 class BasicBlock;
 class InstrBase;
 
-using initList = std::initializer_list<const InstrBase *>;
+using initList = std::initializer_list<InstrBase *>;
 
 using ValueType = int64_t;
-using RegType = uint32_t;
+using RegType = int64_t;
 
-enum class InstrT {
+enum class OpcodeType {
     UNDEF,
-    PHY,
-    CAST,
-    ADDI,
-    ADD,
-    SUBI,
-    SUB,
-    MULI,
-    MUL,
+    // FCONST,
+    ICONST,
     MOVI,
-    MOV,
-    CMP,
-    JA,
-    JAE,
-    JG,
-    JGE,
-    JB,
-    JBE,
-    JL,
-    JLE,
-    JE,
-    JNE,
-    JO,
-    JMP,
-    RET,
+    PHY,
+    // CAST,
+    // ADDI,
+    ADD,
+    // SUBI,
+    // SUB,
+    // MULI,
+    // MUL,
+    // MOVI,
+    AND,
+    XOR,
+    SHL,
+    // MOV,
+    // CMP,
+    // JA,
+    // JAE,
+    // JG,
+    // JGE,
+    // JB,
+    // JBE,
+    // JL,
+    // JLE,
+    // JE,
+    // JNE,
+    // JO,
+    // JMP,
+    // RET,
 };
 
-enum class GroupT {
+enum class GroupType {
     UNDEF,
-    U64,
-    I64,
-    DOUBLE,
+    GENERAL64,
+    CONST,
+    // DOUBLE,
     PHY,
+    CHECK,
     // result type
 };
 
-constexpr int64_t NO_VALUEHOLDER{-1};
-
-class ValueHolder {
-  public:
-    // for constants
+constexpr ValueType NO_VALUEHOLDER{-1};
+struct ValueHolder {
     ValueHolder() = default;
-    ValueHolder(ValueType value) : m_val(value) {}
-    // for reg values
-    ValueHolder(ValueType value, RegType regNum) : m_val(value), m_regNum(regNum) {}
-    bool isConst() const { return (m_regNum == NO_VALUEHOLDER); }
-    uint32_t getRegNum() {
-        if (isConst()) {
-            throw std::logic_error("Constant value does not allow placeholder");
-        }
-        return m_regNum;
+    ValueHolder(ValueType val, RegType reg) : m_val(val), m_regNum(reg) {
+      if (reg < NO_VALUEHOLDER) {
+        throw std::logic_error("Wrong reg");
+      }
     }
-    int64_t get() const {
-      return m_val;
-    }
-    void set(int64_t val) {
-      m_val = val;
-    }
-    void setRegNum(RegType regNum) {
-      m_regNum = regNum;
-    }
-    void makeAsConst() {
-      m_regNum = NO_VALUEHOLDER;
-    }
-
-  private:
-    int64_t m_val{0};
-    int64_t m_regNum{NO_VALUEHOLDER};
+    ValueType m_val{0};
+    RegType m_regNum{NO_VALUEHOLDER};
 };
 
 enum class CondCodeT { EQ, NE, LT, GE };
@@ -95,62 +80,77 @@ enum class FlowT { NONE, DEF, USE };
 // metainstruction w/ Inputs
 
 class InstrBase {
-    using UsersT = std::list<const InstrBase *>;
-    using CInputListIt = typename UsersT::const_iterator;
-    using InputListIt = typename UsersT::iterator;
+  public:
+    using UsersT = std::list<InstrBase *>;
+    using InputsT = std::list<InstrBase *>;
+    using InputListIt = typename InputsT::iterator;
+    using UserListIt = typename UsersT::iterator;
 
   public:
     virtual ~InstrBase();
     InstrBase(){};
-    InstrBase(const BasicBlock &bb);
-    InstrBase(const BasicBlock &bb, id_t id);
     InstrBase(id_t id);
-    InstrBase(const BasicBlock &bb, id_t id, initList list);
-    // InstrBase(const InstrBase &other);
-    // InstrBase(const InstrBase &&other);
-    void set_prev(const InstrBase *instr);
-    void set_next(const InstrBase *instr);
-    void set_bb(const BasicBlock *bb);
+    // InstrBase(BasicBlock &bb);
+    InstrBase(BasicBlock &bb, id_t id);
+    // InstrBase(id_t id);
+    // InstrBase(const BasicBlock &bb, id_t id, initList list);
+
+    void set_prev(InstrBase *instr);
+    void set_next(InstrBase *instr);
+    void set_bb(BasicBlock *bb);
     void set_id(id_t id);
-    void push_input(const InstrBase *instr);
+
+    void push_input(InstrBase *instr);
     void push_inputs(initList list);
+    void push_user(InstrBase *instr);
+    void push_users(initList list);
+
     void forget_dependencies();
-    InputListIt begin();
-    InputListIt end();
-    InputListIt last();
-    InputListIt erase_input(InputListIt cit);
+    InputListIt inputs_begin();
+    InputListIt inputs_end();
+    InputListIt inputs_last();
+    bool onlyOneInput() const;
+    bool onlyOneUser() const;
+    // InputListIt erase_input(InputListIt cit);
     bool erase_input(id_t bb_id, id_t id);
+    UserListIt users_begin();
+    UserListIt users_end();
+    UserListIt users_last();
+    // UserListIt erase_user(UserListIt cit);
+    bool erase_user(id_t bb_id, id_t id);
+    UsersT &users() &;
+    InputsT &inputs() &;
 
     virtual std::string dump() const;
     void throwIfNotConsistent_() const;
-    virtual GroupT get_type() const;
-    const InstrBase *get_prev() const;
-    const InstrBase *get_next() const;
-    const BasicBlock &get_bb() const;
-    CInputListIt cbegin() const;
-    CInputListIt cend() const;
-    CInputListIt clast() const;
-
+    void throwIfWrongDeps_() const;
+    virtual GroupType type() const = 0;
+    InstrBase *prev() const;
+    InstrBase *next() const;
+    BasicBlock *bb() const;
     id_t get_id() const;
 
   protected:
     id_t m_id{ID_UNDEF};
-    const BasicBlock *m_bb{nullptr};
-    const InstrBase *m_prev{nullptr};
-    const InstrBase *m_next{nullptr};
+    BasicBlock *m_bb{nullptr};
+    InstrBase *m_prev{nullptr};
+    InstrBase *m_next{nullptr};
     UsersT m_users{};
+    InputsT m_inputs{};
 };
 
 class Instr : public InstrBase {
   public:
     Instr();
-    Instr(id_t id);
-    Instr(const BasicBlock &bb, id_t id, InstrT opcode, GroupT type, int64_t value, int64_t valueHolder);
+    // Instr(id_t id);
+    Instr(id_t id, OpcodeType opcode, GroupType type, ValueHolder value);
     std::string dump() const override;
+    GroupType type() const override { return m_type; }
+    void throwIfWrongInputCount_() const;
 
   public:
-    const InstrT m_opcd{InstrT::UNDEF};
-    const GroupT m_type{GroupT::UNDEF};
+    OpcodeType m_opcd{OpcodeType::UNDEF};
+    GroupType m_type{GroupType::UNDEF};
     ValueHolder m_value{};
 };
 
@@ -158,44 +158,8 @@ class Phy final : public InstrBase {
   public:
     Phy();
     Phy(id_t id);
-    Phy(const BasicBlock &bb, id_t id, initList list);
     std::string dump() const override;
+    GroupType type() const override { return GroupType::PHY; }
 };
-
-// Specific instrs classes
-// class UnaryRegInstr : public InstrBase, public InputList {
-//   public:
-//     UnaryRegInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
-// };
-
-// class BinaryRegInstr : public InstrBase, public InputList {
-//   public:
-//     BinaryRegInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
-// };
-
-// class BinaryImmInstr : public InstrBase, public InputList, public ImmedOpnd<uint64_t> {
-//   public:
-//     BinaryImmInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
-// };
-
-// class CompareInstr : public InstrBase, public InputList, public CondOpnd {
-//   public:
-//     CompareInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
-// };
-
-// class CastInstr : public InstrBase, public InputList, public TypeOpnd {
-//   public:
-//     CastInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
-// };
-
-// class JumpInstr : public InstrBase, public ImmOpnd<uint64_t> {
-//   public:
-//     JumpInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
-// };
-
-// class RetInstr : public InstrBase {
-//   public:
-//     RetInstr(InstrT opcd, GroupT type) : InstrBase(opcd, type) {}
-// };
 
 } // namespace IR

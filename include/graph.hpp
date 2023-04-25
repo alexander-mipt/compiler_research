@@ -40,7 +40,7 @@ template <typename N, typename E> class Graph;
 template <typename N, typename E> class Node {
 
   public:
-    Node(N &&data, const Graph<N, E> &g);
+    Node(N &data, const Graph<N, E> &g);
     virtual ~Node(){};
     key_t add_successor(key_t s_key);
     key_t add_predecessor(key_t p_key);
@@ -54,7 +54,7 @@ template <typename N, typename E> class Node {
 
     void set_color(ColorT c);
     void set_loop(key_t header_key);
-    N &access_data() &;
+    N &data() &;
     const key_t get_key() const;
     ColorT get_color() const;
     key_t get_loop() const;
@@ -66,7 +66,7 @@ template <typename N, typename E> class Node {
   protected:
     // const Node<N, E> *get_node_ptr(key_t node_key);
     // friend const Node<N,E> *Graph<N,E>::get_node_ptr(key_t node_key);
-    N m_data{nullptr};
+    N &m_data;
 
   protected:
     const Graph<N, E> *m_graph{nullptr};
@@ -78,7 +78,7 @@ template <typename N, typename E> class Node {
 };
 
 template <typename N, typename E>
-Node<N, E>::Node(N &&data, const Graph<N, E> &g) : m_data(std::move(data)), m_graph(&g) {}
+Node<N, E>::Node(N &data, const Graph<N, E> &g) : m_data(data), m_graph(&g) {}
 
 template <typename N, typename E> void Node<N, E>::set_color(ColorT c) { m_color = c; }
 template <typename N, typename E> void Node<N, E>::set_loop(key_t head_key) { m_loop = head_key; }
@@ -185,7 +185,7 @@ template <typename N, typename E> key_t Node<N, E>::delete_predecessor(key_t p_k
 
 template <typename N, typename E> const key_t Node<N, E>::get_key() const { return m_key; }
 
-template <typename N, typename E> N &Node<N, E>::access_data() & { return m_data; }
+template <typename N, typename E> N &Node<N, E>::data() & { return m_data; }
 
 // N, E - type of additional data for node, edge respectively
 template <typename N, typename E> class Edge {
@@ -242,9 +242,11 @@ template <typename N, typename E> class Graph {
     Graph &operator=(const Graph &) = delete;
     virtual ~Graph();
 
-    virtual key_t add_node(N &&node_data);
-    virtual key_t add_node(N &&node_data, key_t key);
-    virtual key_t add_nodes(N &&node_data, size_t count);
+    // virtual key_t add_node(N &&node_data);
+    /// @brief add node with given key; if no key provided - use internal keygen
+    /// @return node key or KEY_UNDEF in case of error
+    virtual key_t add_node(N &node_data, key_t key = KEY_UNDEF);
+    virtual key_t add_nodes(N &node_data, size_t count);
     virtual key_t delete_node(key_t node_key);
     virtual key_t add_edge(E &&edge_data, key_t start_node_key, key_t end_node_key);
     virtual key_t delete_edge(key_t start_node_key, key_t end_node_key);
@@ -295,10 +297,14 @@ template <typename N, typename E> class Graph {
     std::map<key_t, Edge<N, E> *> m_edges_buf{};
 };
 
-template<typename N, typename E>
-typename std::map<key_t, Node<N, E> *>::iterator Graph<N,E>::nodes_begin() { return m_nodes.begin(); }
-template<typename N, typename E>
-typename std::map<key_t, Node<N, E> *>::iterator Graph<N,E>::nodes_end() { return m_nodes.end(); }
+template <typename N, typename E>
+typename std::map<key_t, Node<N, E> *>::iterator Graph<N, E>::nodes_begin() {
+    return m_nodes.begin();
+}
+template <typename N, typename E>
+typename std::map<key_t, Node<N, E> *>::iterator Graph<N, E>::nodes_end() {
+    return m_nodes.end();
+}
 
 template <typename N, typename E> key_t Graph<N, E>::get_avail_nd_key() const {
     return m_actual_node_key;
@@ -308,27 +314,32 @@ template <typename N, typename E> key_t Graph<N, E>::get_avail_edg_key() const {
     return m_actual_edge_key;
 }
 
-template <typename N, typename E> key_t Graph<N, E>::add_node(N &&node_data) {
-    Node<N, E> *nptr = new Node<N, E>{std::move(node_data), *this};
-    key_t node_key = nptr->key_init();
-    auto node_insertion_result = m_nodes.insert(std::make_pair(node_key, nptr));
-    if (!node_insertion_result.second) {
-        OPT(LOG("Cannot insert node w/ given key"));
-        delete nptr;
-        return KEY_UNDEF;
-    }
-    m_actual_node_key++;
-    return node_key;
-}
+// template <typename N, typename E> key_t Graph<N, E>::add_node(N &&node_data) {
+//     Node<N, E> *nptr = new Node<N, E>{std::move(node_data), *this};
+//     key_t node_key = nptr->key_init();
+//     auto node_insertion_result = m_nodes.insert(std::make_pair(node_key, nptr));
+//     if (!node_insertion_result.second) {
+//         OPT(LOG("Cannot insert node w/ given key"));
+//         delete nptr;
+//         return KEY_UNDEF;
+//     }
+//     m_actual_node_key++;
+//     return node_key;
+// }
 
-template <typename N, typename E> key_t Graph<N, E>::add_node(N &&node_data, key_t key) {
-    auto node_find_result = m_nodes.find(key);
-    if (node_find_result != m_nodes.end()) {
-        OPT(LOG("Wrong node key"));
-        return KEY_UNDEF;
+template <typename N, typename E> key_t Graph<N, E>::add_node(N &node_data, key_t key) {
+    if (key == KEY_UNDEF) {
+        key = m_actual_node_key;
+    } else {
+        auto node_find_result = m_nodes.find(key);
+        if (node_find_result != m_nodes.end()) {
+            OPT(LOG("Wrong node key"));
+            return KEY_UNDEF;
+        }
+        m_actual_node_key = std::max(key, m_actual_node_key);
     }
-    m_actual_node_key = std::max(key, m_actual_node_key);
-    Node<N, E> *nptr = new Node<N, E>{std::move(node_data), *this};
+    
+    Node<N, E> *nptr = new Node<N, E>{node_data, *this};
     key_t node_key = nptr->set_key(key);
     auto node_insertion_result = m_nodes.insert(std::make_pair(node_key, nptr));
     if (!node_insertion_result.second) {
@@ -340,13 +351,15 @@ template <typename N, typename E> key_t Graph<N, E>::add_node(N &&node_data, key
     return node_key;
 }
 
-template <typename N, typename E> key_t Graph<N, E>::add_nodes(N &&node_data, size_t count) {
+template <typename N, typename E> key_t Graph<N, E>::add_nodes(N &node_data, size_t count) {
+    key_t key{KEY_UNDEF};
     for (size_t i = 0; i < count; ++i) {
-        auto key = add_node(std::move(node_data));
+        key = add_node(node_data);
         if (key == KEY_UNDEF) {
             return KEY_UNDEF;
         }
     }
+    return key;
 }
 
 template <typename N, typename E> key_t Graph<N, E>::delete_node(key_t node_key) {
