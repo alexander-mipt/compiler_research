@@ -89,6 +89,9 @@ void BasicBlock::push_instrs(InstrInitList list) {
             throw std::logic_error("instr id dublicate");
         }
         instr->throwIfNotConsistent_();
+        if (instr->bb() != nullptr) {
+            throw std::logic_error("Instr has already been attached to bb");
+        }
         instr->set_bb(this);
         instr->set_prev(prev);
         instr->set_next(nullptr);
@@ -193,11 +196,21 @@ BasicBlock::InstrIt BasicBlock::erase_instr(InstrIt it) {
     instr->set_bb(nullptr);
 
     InstrIt nextIt = m_instrs.erase(it);
-    delete *it;
     return nextIt;
 }
 
-std::pair<BasicBlock::InstrIt, Instr *> BasicBlock::cut_instr(key_t key) {
+id_t BasicBlock::erase_instr(id_t key) {
+    for (auto it = m_instrs.begin(); it != m_instrs.end(); ++it) {
+        auto* instr = *it;
+        if (instr->get_id() == key) {
+            erase_instr(it);
+            return key;
+        }
+    }
+    return ID_UNDEF;
+}
+
+std::pair<BasicBlock::InstrIt, Instr *> BasicBlock::cut_instr(id_t key) {
     auto it = m_instrs.begin();
     while (it != m_instrs.end()) {
         auto *instr = *it;

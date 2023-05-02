@@ -20,6 +20,26 @@ G::key_t BbGraph::add_node(BasicBlock& data, id_t id) {
     return key;
 }
 
+void BbGraph::throwIfNotConsistent() {
+    if (m_nodes.size() == 0) {
+        return;
+    }
+    if (m_headerBbKey == G::KEY_UNDEF) {
+        throw std::logic_error("Header was not set");
+    }
+    const IR::BasicBlock &bb = m_nodes[m_headerBbKey]->data();
+    for (auto it = bb.instr_cbegin(); it != bb.instr_cend(); ++it) {
+        const auto *i = *it;
+        if (i->m_type != IR::GroupType::CONST) {
+            throw std::logic_error("Header contain non-const data");
+        }
+    }
+    for (const auto &node: m_nodes) {
+        const auto &bb = node.second->data();
+        bb.throwIfNotConsistent_();
+    }
+}
+
 std::string BbGraph::dump() const {
     std::stringstream ss{};
     auto cfg = Graph::dump();

@@ -239,6 +239,8 @@ void Instr::throwIfWrongInputCount_() const {
         }
         break;
     case OpcodeType::MOVI:
+    case OpcodeType::CHECK1:
+    case OpcodeType::CHECK2:
         if (m_inputs.size() != 1) {
             throw std::logic_error("Wrong input count");
         }

@@ -44,7 +44,8 @@ class BasicBlock final {
     void push_phys(PhyInitList list);
     size_t removeUnusedInstrs();
     InstrIt erase_instr(InstrIt it);
-    std::pair<InstrIt, Instr*> cut_instr(key_t key);
+    id_t erase_instr(id_t id);
+    std::pair<InstrIt, Instr*> cut_instr(id_t key);
     PhyIt erase_phy(PhyIt it);
     id_t set_id(id_t id);
     InstrIt instr_begin();

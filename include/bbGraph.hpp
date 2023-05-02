@@ -19,6 +19,12 @@ class BbGraph : public Graph<BasicBlock, int> {
     /// @brief get header basic block; it should contain constant & param nodes
     /// @return node key or KEY_UNDEF if not found
     key_t setHeader(key_t key) {
+        if (m_nodes.size() == 0) {
+            return G::KEY_UNDEF;
+        }
+        if (m_nodes.find(key) == m_nodes.end()) {
+            return G::KEY_UNDEF;
+        }
         m_headerBbKey = key;
         return key;
     }
@@ -28,8 +34,9 @@ class BbGraph : public Graph<BasicBlock, int> {
         }
         return m_nodes[m_headerBbKey];
     }
+    void throwIfNotConsistent();
     private:
-    key_t m_headerBbKey{G::KEY_UNDEF};
+    G::key_t m_headerBbKey{G::KEY_UNDEF};
     Metadata m_metadata; 
 };
 } // namespace IR

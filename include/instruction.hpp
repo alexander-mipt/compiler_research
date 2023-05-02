@@ -33,6 +33,8 @@ enum class OpcodeType {
     AND,
     XOR,
     SHL,
+    CHECK1,
+    CHECK2,
     // MOV,
     // CMP,
     // JA,

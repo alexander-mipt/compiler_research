@@ -12,6 +12,11 @@ class InstrManager {
     InstrManager(const InstrManager &) = delete;
     InstrManager(InstrManager &&) = delete;
     InstrManager() = default;
+    void print() {
+        for (auto *i : m_mem) {
+            std::cout << i->get_id() << std::endl;
+        }
+    }
     ~InstrManager() {
         for (auto i : m_mem) {
             delete i;
@@ -34,9 +39,14 @@ class InstrManager {
         return create(OpcodeType::MOVI, GroupType::CONST, value);
     }
 
+    Instr *createCheck(OpcodeType opcode) {
+        if (opcode != OpcodeType::CHECK1 && opcode != OpcodeType::CHECK2) {
+            return nullptr;
+        }
+        return create(opcode, GroupType::CHECK, {});
+    }
 
-    Instr *create(OpcodeType type, GroupType group,
-                  ValueHolder value, id_t id = -1) {
+    Instr *create(OpcodeType type, GroupType group, ValueHolder value, id_t id = -1) {
         if (group == GroupType::PHY || type == OpcodeType::PHY) {
             throw std::logic_error("Wrong instr type");
         }
@@ -69,6 +79,7 @@ class InstrManager {
                 throw std::logic_error("instr w/ nullptr");
             }
             i->throwIfNotConsistent_();
+            ids.insert(i->get_id());
         }
         if (ids.size() != m_mem.size()) {
             throw std::logic_error("instr ids collision");
@@ -81,7 +92,7 @@ class InstrManager {
 };
 
 class BasicBlockManager {
-    public:
+  public:
     BasicBlockManager() = default;
     ~BasicBlockManager() {
         for (auto i : m_mem) {
