@@ -49,7 +49,8 @@ enum class OpcodeType {
     // JNE,
     // JO,
     // JMP,
-    // RET,
+    CALL,
+    RET,
 };
 
 enum class GroupType {
@@ -59,6 +60,8 @@ enum class GroupType {
     // DOUBLE,
     PHY,
     CHECK,
+    CALL,
+    PARAM,
     // result type
 };
 
@@ -66,9 +69,9 @@ constexpr ValueType NO_VALUEHOLDER{-1};
 struct ValueHolder {
     ValueHolder() = default;
     ValueHolder(ValueType val, RegType reg) : m_val(val), m_regNum(reg) {
-      if (reg < NO_VALUEHOLDER) {
-        throw std::logic_error("Wrong reg");
-      }
+        if (reg < NO_VALUEHOLDER) {
+            throw std::logic_error("Wrong reg");
+        }
     }
     ValueType m_val{0};
     RegType m_regNum{NO_VALUEHOLDER};
@@ -124,7 +127,7 @@ class InstrBase {
     InputsT &inputs() &;
 
     virtual std::string dump() const;
-    void throwIfNotConsistent_() const;
+    virtual void throwIfNotConsistent_() const;
     void throwIfWrongDeps_() const;
     virtual GroupType type() const = 0;
     InstrBase *prev() const;
@@ -144,6 +147,7 @@ class InstrBase {
 class Instr : public InstrBase {
   public:
     Instr();
+    virtual ~Instr() = default;
     // Instr(id_t id);
     Instr(id_t id, OpcodeType opcode, GroupType type, ValueHolder value);
     std::string dump() const override;
@@ -154,6 +158,18 @@ class Instr : public InstrBase {
     OpcodeType m_opcd{OpcodeType::UNDEF};
     GroupType m_type{GroupType::UNDEF};
     ValueHolder m_value{};
+};
+
+// by design it has many positional args and 1 return val
+class Call : public Instr {
+  public:
+  Call();
+  Call(id_t id, ValueHolder value);
+  std::string dump() const override;
+  void throwIfNotConsistent_() const override;
+
+  public:
+  BbGraph *m_g{nullptr};
 };
 
 class Phy final : public InstrBase {

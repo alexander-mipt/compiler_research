@@ -289,6 +289,24 @@ std::string Instr::dump() const {
     return ss.str();
 }
 
+Call::Call() {}
+Call::Call(id_t id, ValueHolder value) : Instr(id, OpcodeType::CALL, GroupType::CALL, value) {}
+std::string Call::dump() const {
+    std::stringstream ss{};
+    ss << Instr::dump();
+    if (m_g != nullptr) {
+        ss << " graph: " << (uintptr_t)(m_g);
+    }
+    return ss.str();
+}
+void Call::throwIfNotConsistent_() const {
+    Instr::throwIfNotConsistent_();
+    if (!m_g) {
+        throw std::logic_error("Graph is nullptr");
+    }
+    m_g->throwIfNotConsistent();
+}
+
 /* Phy class */
 Phy::Phy() : InstrBase() {}
 Phy::Phy(id_t id) : InstrBase(id) {}

@@ -48,6 +48,7 @@ class BasicBlock final {
     std::pair<InstrIt, Instr*> cut_instr(id_t key);
     PhyIt erase_phy(PhyIt it);
     id_t set_id(id_t id);
+    // id_t rewrite_id(id_t id);
     InstrIt instr_begin();
     InstrIt instr_end();
     InstrIt instr_last();
@@ -65,6 +66,8 @@ class BasicBlock final {
     PhyCIt phy_cbegin() const;
     PhyCIt phy_cend() const;
     PhyCIt phy_clast() const;
+    InstrIt find_first_instr_occurence(id_t id);
+    InstrContainer &access_instrs();
 
   private:
     id_t m_bb_id{ID_UNDEF};

@@ -1,5 +1,6 @@
 #include "basicblock.hpp"
 #include "instruction.hpp"
+#include <iterator>
 #include <iostream>
 #include <set>
 namespace IR {
@@ -260,6 +261,22 @@ size_t BasicBlock::removeUnusedInstrs() {
         }
     }
     return count;
+}
+
+BasicBlock::InstrIt BasicBlock::find_first_instr_occurence(id_t id) {
+    auto it = m_instrs.begin();
+    while (it != m_instrs.end()) {
+        auto *i = *it;
+        if (i->get_id() == id) {
+            return it;
+        }
+        ++it;
+    }
+    return m_instrs.end();
+}
+
+BasicBlock::InstrContainer &BasicBlock::access_instrs() {
+    return m_instrs;
 }
 
 } // namespace IR
