@@ -45,6 +45,7 @@ class BasicBlock final {
     size_t removeUnusedInstrs();
     InstrIt erase_instr(InstrIt it);
     id_t erase_instr(id_t id);
+    id_t erase_unused_instr(id_t id);
     std::pair<InstrIt, Instr*> cut_instr(id_t key);
     PhyIt erase_phy(PhyIt it);
     id_t set_id(id_t id);

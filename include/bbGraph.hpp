@@ -34,6 +34,20 @@ class BbGraph : public Graph<BasicBlock, int> {
         }
         return m_nodes[m_headerBbKey];
     }
+    void removeUnusedConsts() {
+        auto &head = accessHeader()->data();
+        auto it = head.instr_begin();
+        std::vector<IR::id_t> keys{}; 
+        while (it != head.instr_end()) {
+            if ((*it)->type() == IR::GroupType::CONST && (*it)->users().size() == 0) {
+                keys.push_back((*it)->get_id());
+            }
+            ++it;
+        }
+        for (auto key : keys) {
+            head.erase_instr(key);
+        }
+    }
     void throwIfNotConsistent();
     private:
     G::key_t m_headerBbKey{G::KEY_UNDEF};

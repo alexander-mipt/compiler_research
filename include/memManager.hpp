@@ -26,6 +26,9 @@ class InstrManager {
     Instr *createADD(ValueHolder value) {
         return create(OpcodeType::ADD, GroupType::GENERAL64, value);
     }
+    Instr *createAND(ValueHolder value) {
+        return create(OpcodeType::AND, GroupType::GENERAL64, value);
+    }
     Instr *createXOR(ValueHolder value) {
         return create(OpcodeType::XOR, GroupType::GENERAL64, value);
     }
@@ -37,6 +40,9 @@ class InstrManager {
             return create(OpcodeType::ICONST, GroupType::CONST, value);
         }
         return create(OpcodeType::MOVI, GroupType::CONST, value);
+    }
+    Instr *createLOAD(ValueHolder value) {
+        return create(OpcodeType::LOAD, GroupType::GENERAL64, value);
     }
 
     Instr *createCheck(OpcodeType opcode) {

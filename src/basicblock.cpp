@@ -210,6 +210,17 @@ id_t BasicBlock::erase_instr(id_t key) {
     return ID_UNDEF;
 }
 
+id_t BasicBlock::erase_unused_instr(id_t key) {
+    for (auto it = m_instrs.begin(); it != m_instrs.end(); ++it) {
+        auto* instr = *it;
+        if (instr->get_id() == key && instr->users().size() == 0) {
+            erase_instr(it);
+            return key;
+        }
+    }
+    return ID_UNDEF;
+}
+
 std::pair<BasicBlock::InstrIt, Instr *> BasicBlock::cut_instr(id_t key) {
     auto it = m_instrs.begin();
     while (it != m_instrs.end()) {

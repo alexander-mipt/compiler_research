@@ -35,6 +35,7 @@ enum class OpcodeType {
     SHL,
     CHECK1,
     CHECK2,
+    LOAD,
     // MOV,
     // CMP,
     // JA,
